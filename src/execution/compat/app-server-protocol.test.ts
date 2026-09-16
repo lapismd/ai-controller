@@ -166,3 +166,45 @@ describe("Codex app-server protocol mapper", () => {
     });
   });
 });
+
+it("maps empty MCP elicitation forms to one-time approval without inventing field values", () => {
+  const message = {
+    id: "mcp-1",
+    method: "mcpServer/elicitation/request",
+    params: {
+      serverName: "lapis-tools",
+      mode: "form",
+      message: "Allow fixture edit?",
+      requestedSchema: { type: "object", properties: {} },
+    },
+  };
+  const approval = approvalRequestFromServerRequest(message);
+  expect(approval).toMatchObject({
+    id: "mcp-1",
+    origin: "runtime",
+    title: "Allow fixture edit?",
+    kind: "other",
+  });
+  expect(approval?.options.map((option) => option.id)).toEqual([
+    "allow-once",
+    "deny-once",
+  ]);
+  expect(approvalReplyForServerRequest(message, "allow-once")).toEqual({
+    result: { action: "accept", content: {} },
+  });
+  expect(approvalReplyForServerRequest(message, "deny-once")).toEqual({
+    result: { action: "decline" },
+  });
+  expect(
+    approvalRequestFromServerRequest({
+      ...message,
+      params: {
+        ...message.params,
+        requestedSchema: {
+          type: "object",
+          properties: { email: { type: "string" } },
+        },
+      },
+    }),
+  ).toBeNull();
+});

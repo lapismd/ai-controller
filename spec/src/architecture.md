@@ -127,3 +127,8 @@ retains server-specific environments.
 
 Native MCP environment regressions run alongside the existing session, context,
 approval, structured-input, configuration and resume contract tests.
+
+Native empty-form MCP elicitations are one-time approval interactions. Forms with
+fields or URL actions are not treated as approval and receive an unsupported
+request error; the adapter never invents required user input. Unknown server
+requests receive a JSON-RPC error instead of silently leaving a turn waiting.

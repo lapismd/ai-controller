@@ -170,6 +170,26 @@ export function approvalRequestFromServerRequest(
   if (message.id === undefined || !message.method) return null;
   const request = asRecord(message.params);
   const method = message.method;
+  if (method === "mcpServer/elicitation/request") {
+    const schema = asRecord(request.requestedSchema);
+    if (
+      request.mode !== "form" ||
+      schema.type !== "object" ||
+      !schema.properties ||
+      Object.keys(asRecord(schema.properties)).length > 0 ||
+      (Array.isArray(schema.required) && schema.required.length > 0)
+    )
+      return null;
+    return {
+      id: String(message.id),
+      origin: "runtime",
+      kind: "other",
+      title: stringValue(request.message) ?? "Allow this MCP action?",
+      options: DEFAULT_APPROVAL_OPTIONS.filter(
+        (option) => option.id === "allow-once" || option.id === "deny-once",
+      ),
+    };
+  }
   if (
     ![
       "item/commandExecution/requestApproval",
@@ -294,6 +314,16 @@ export function approvalReplyForServerRequest(
   result?: Record<string, unknown>;
   error?: { code: number; message: string };
 } {
+  if (message.method === "mcpServer/elicitation/request") {
+    if (optionId !== "allow-once" && optionId !== "deny-once")
+      throw new Error("Unsupported MCP approval decision");
+    return {
+      result:
+        optionId === "allow-once"
+          ? { action: "accept", content: {} }
+          : { action: "decline" },
+    };
+  }
   if (message.method === "item/permissions/requestApproval") {
     if (optionId.startsWith("deny")) {
       return {

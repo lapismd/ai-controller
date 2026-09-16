@@ -306,3 +306,23 @@ it("rejects conflicting native MCP environments before starting a process", asyn
   ).rejects.toThrow("Conflicting native MCP environment variable");
   expect(spawn).not.toHaveBeenCalled();
 });
+
+it("rejects unsupported server requests so native tools cannot hang silently", async () => {
+  const host = new MemoryProcessHost();
+  const session = await new CodexNativeRuntime(host).start({ prompt: "" });
+  try {
+    host.handle.emit(
+      `${JSON.stringify({ id: "unsupported", method: "unknown/request", params: { private: "not logged" } })}\n`,
+    );
+    await vi.waitFor(() =>
+      expect(host.handle.writes.map((line) => JSON.parse(line))).toContainEqual(
+        {
+          id: "unsupported",
+          error: { code: -32601, message: "Unsupported provider request" },
+        },
+      ),
+    );
+  } finally {
+    await session.close();
+  }
+});

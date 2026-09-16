@@ -253,6 +253,22 @@ export class CodexNativeSession implements AgentSession {
       this.#events.push({ type: "question.request", request: question });
       return;
     }
+    if (parsed.id !== undefined && parsed.method) {
+      this.#events.push({
+        type: "status",
+        status: "unsupported_provider_request",
+      });
+      void this.#write({
+        id: parsed.id,
+        error: { code: -32601, message: "Unsupported provider request" },
+      }).catch(() => {
+        this.#events.push({
+          type: "error",
+          error: new Error("Provider response delivery failed"),
+        });
+      });
+      return;
+    }
     const event = mapCodexNotification(parsed);
     if (!event) return;
     if (event.type === "completed" || event.type === "error") {
