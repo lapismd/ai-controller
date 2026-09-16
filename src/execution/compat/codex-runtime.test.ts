@@ -263,3 +263,46 @@ describe("CodexNativeRuntime", () => {
     await session?.close();
   });
 });
+
+it("passes external MCP environment through the process without secrets in argv", async () => {
+  const spawn = vi.fn(async (_options: AgentProcessSpawnOptions) => {
+    throw new Error("capture only");
+  });
+  const runtime = new CodexNativeRuntime({ available: true, spawn });
+  await expect(
+    runtime.start({
+      prompt: "",
+      mcpServers: [
+        {
+          name: "example",
+          command: "example-mcp",
+          env: { EXAMPLE_TOKEN: "fixture-secret" },
+        },
+      ],
+    }),
+  ).rejects.toThrow("capture only");
+  const options = spawn.mock.calls[0]?.[0]!;
+  expect(options.env).toEqual({ EXAMPLE_TOKEN: "fixture-secret" });
+  expect(options.args).toContain(
+    'mcp_servers.example.env_vars=["EXAMPLE_TOKEN"]',
+  );
+  expect(options.args).toContain("mcp_servers.example.required=true");
+  expect(options.args!.join(" ")).not.toContain("fixture-secret");
+});
+
+it("rejects conflicting native MCP environments before starting a process", async () => {
+  const spawn = vi.fn(async (_options: AgentProcessSpawnOptions) => {
+    throw new Error("must not launch");
+  });
+  const runtime = new CodexNativeRuntime({ available: true, spawn });
+  await expect(
+    runtime.start({
+      prompt: "",
+      mcpServers: [
+        { name: "first", command: "first", env: { SHARED_TOKEN: "one" } },
+        { name: "second", command: "second", env: { SHARED_TOKEN: "two" } },
+      ],
+    }),
+  ).rejects.toThrow("Conflicting native MCP environment variable");
+  expect(spawn).not.toHaveBeenCalled();
+});

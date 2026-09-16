@@ -1,3 +1,4 @@
+import { ControllerError } from "../../contracts.js";
 import { AsyncEventQueue } from "./event-queue.js";
 import {
   NATIVE_CODEX_APPROVAL_CAPABILITIES,
@@ -355,6 +356,7 @@ export class CodexNativeRuntime implements AgentRuntime {
     const process = await this.#host.spawn({
       command: "codex",
       args: codexArgsFor(request.mcpServers),
+      env: codexEnvironmentFor(request.mcpServers),
       cwd: request.workspace,
       appToolBridgeId: request.appToolSession?.bridgeId,
     });
@@ -382,6 +384,13 @@ function codexArgsFor(
   for (const server of mcpServers ?? []) {
     const prefix = `mcp_servers.${server.name}`;
     args.push("-c", `${prefix}.command=${JSON.stringify(server.command)}`);
+    args.push("-c", `${prefix}.required=true`);
+    if (server.env) {
+      args.push(
+        "-c",
+        `${prefix}.env_vars=${JSON.stringify(Object.keys(server.env))}`,
+      );
+    }
     if (server.args) {
       args.push("-c", `${prefix}.args=${JSON.stringify(server.args)}`);
     }
@@ -396,4 +405,25 @@ function codexArgsFor(
     }
   }
   return args;
+}
+
+function codexEnvironmentFor(
+  servers: McpServerContribution[] | undefined,
+): Record<string, string> {
+  const env: Record<string, string> = Object.create(null);
+  for (const server of servers ?? []) {
+    for (const [name, value] of Object.entries(server.env ?? {})) {
+      if (
+        name.startsWith("LAPIS_TOOL_BRIDGE_") ||
+        (Object.hasOwn(env, name) && env[name] !== value)
+      ) {
+        throw new ControllerError(
+          "unsupported_configuration",
+          "Conflicting native MCP environment variable",
+        );
+      }
+      env[name] = value;
+    }
+  }
+  return env;
 }

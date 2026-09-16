@@ -118,3 +118,12 @@ selection or requiring additional global agent binaries.
 Startup validates all retained record shapes before recovery starts external work.
 Unsupported database versions and malformed records fail closed with payload-free
 errors. Metadata-only preparation markers have their own retained schema.
+
+Native external MCP processes receive explicit environment-name allowlists and
+required startup. Values remain in the native process environment, not argv.
+Because these servers share one native parent environment, conflicting values
+for the same name and reserved application-bridge names fail before launch; ACP
+retains server-specific environments.
+
+Native MCP environment regressions run alongside the existing session, context,
+approval, structured-input, configuration and resume contract tests.

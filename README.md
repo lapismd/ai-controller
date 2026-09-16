@@ -66,3 +66,8 @@ reported as gaps. Native context restoration depends on provider capabilities.
 Canonical behavior is specified in [the architecture](spec/src/architecture.md).
 [Migration evidence and release boundaries](spec/records/migration.md) distinguish
 fixture validation from live-provider and installed-service acceptance.
+
+Native Codex MCP servers share their parent environment: configured values for
+the same environment variable must agree across servers. Conflicting values and
+reserved `LAPIS_TOOL_BRIDGE_*` names fail before launch. ACP supports separate
+per-server environments. Secrets are never placed in native process arguments.
