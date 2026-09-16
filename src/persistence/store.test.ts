@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { ControllerStore } from "./store.js";
 
 const roots: string[] = [];
@@ -128,4 +129,32 @@ describe("durable intent", () => {
     expect(store.events("owner", thread.id, before.cursor)).toEqual([]);
     store.close();
   });
+});
+
+it("fails closed before recovering an invalid persisted turn", () => {
+  const { root, store } = open();
+  const thread = store.createThread("owner", {
+    provider: "fake",
+    workspace: "workspace",
+  });
+  const receipt = store.accept("owner", {
+    threadId: thread.id,
+    commandId: "corrupt",
+    text: "PRIVATE-CONTENT",
+  });
+  store.close();
+  const path = join(root, "controller.sqlite");
+  const db = new DatabaseSync(path);
+  db.prepare(
+    "UPDATE turns SET body=json_set(body,'$.state','invalid-state') WHERE id=?",
+  ).run(receipt.turnId);
+  db.close();
+  let opened: ControllerStore | undefined;
+  try {
+    expect(() => {
+      opened = new ControllerStore(path);
+    }).toThrow("Invalid persisted turns record");
+  } finally {
+    opened?.close();
+  }
 });

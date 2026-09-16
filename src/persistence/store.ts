@@ -1,3 +1,4 @@
+import { storedTables, validateStoredRecord } from "./schemas.js";
 import { DatabaseSync } from "node:sqlite";
 import { createHash, randomUUID } from "node:crypto";
 import {
@@ -60,6 +61,11 @@ export class ControllerStore {
         CREATE TABLE IF NOT EXISTS interactions(id TEXT PRIMARY KEY, thread_id TEXT NOT NULL REFERENCES threads(id), body TEXT NOT NULL);
         PRAGMA user_version=1;
       `);
+      for (const table of storedTables)
+        for (const row of this.#db
+          .prepare(`SELECT body FROM ${table}`)
+          .iterate())
+          validateStoredRecord(table, row.body);
       this.#db
         .prepare("INSERT OR IGNORE INTO meta VALUES('epoch',?)")
         .run(randomUUID());

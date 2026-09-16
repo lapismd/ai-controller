@@ -114,3 +114,7 @@ retrying the original command. The CLI exposes this through `turns resolve`.
 Provider launch defaults come from the installed ai-host/acpx registry. The
 controller resolves external executable paths for Deno without replacing adapter
 selection or requiring additional global agent binaries.
+
+Startup validates all retained record shapes before recovery starts external work.
+Unsupported database versions and malformed records fail closed with payload-free
+errors. Metadata-only preparation markers have their own retained schema.
