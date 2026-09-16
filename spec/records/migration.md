@@ -166,3 +166,11 @@ original command.
 The setup-failure, uncertain-workspace, native-cancellation and attachment regressions
 were reproduced before their fixes. All 57 controller tests, check/boundary validation,
 specification checks, generated CLI reference, build and publint pass.
+
+## Spec-completeness checkpoint — 2026-09-16
+
+Verification rows that previously pointed at this record as Planned now cite
+in-repo tests. Remaining consumer work is Nostr controller-owned recall, stale
+first-party requirement wording that still describes `desktop_agent_acp_*` as
+the live path, and registry publication. First-party execution ownership has
+already moved. Do not treat Fake/`!preparesContext` fixtures as cutover proof.

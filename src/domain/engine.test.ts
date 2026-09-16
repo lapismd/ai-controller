@@ -443,3 +443,61 @@ it("keeps an uncertain workspace fenced after a database restart", async () => {
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+it("does not invoke application tools for native observed activity", async () => {
+  const store = new ControllerStore(":memory:");
+  let executed = 0;
+  const controller = new Controller(
+    store,
+    new Map([
+      [
+        "fake",
+        {
+          capabilities,
+          close: async () => {},
+          execute: async (c) => {
+            await c.emit({
+              type: "activity",
+              data: { type: "tool.start", name: "mcp_search" },
+            });
+            await c.emit({ type: "completed" });
+          },
+        },
+      ],
+    ]),
+  );
+  controller.registerTools("owner", "tools", {
+    definitions: [
+      {
+        name: "mcp_search",
+        description: "search",
+        effect: "read",
+        inputSchema: { type: "object" },
+      },
+    ],
+    execute: async () => {
+      executed++;
+      return { content: "should not run" };
+    },
+  });
+  const thread = store.createThread("owner", {
+    provider: "fake",
+    workspace: "root",
+    toolEndpoint: "tools",
+  });
+  controller.submit("owner", {
+    threadId: thread.id,
+    commandId: "observe",
+    text: "look",
+  });
+  await controller.drain();
+  expect(executed).toBe(0);
+  expect(store.interactions(thread.id)).toEqual([]);
+  expect(
+    store
+      .events("owner", thread.id, `${store.epoch}:0`)
+      .some((event) => event.type === "output.activity"),
+  ).toBe(true);
+  await controller.close();
+  store.close();
+});

@@ -84,10 +84,15 @@ describe("durable intent", () => {
       request: "private arguments",
       response: "private result",
     });
+    store.saveTurn({
+      ...store.turn(receipt.turnId)!,
+      error: "Error: stack with private secret text",
+    });
     expect(store.turn(receipt.turnId)?.text).toBe("private secret text");
     expect(JSON.stringify(store.durableRows())).not.toContain(
       "private secret text",
     );
+    expect(JSON.stringify(store.durableRows())).toContain("execution_failed");
     for (const text of [
       "private context",
       "private output",
@@ -131,6 +136,22 @@ describe("durable intent", () => {
   });
 });
 
+it("fails closed when a newer database version is opened", () => {
+  const { root, store } = open();
+  store.close();
+  const path = join(root, "controller.sqlite");
+  const db = new DatabaseSync(path);
+  db.exec("PRAGMA user_version=2");
+  db.close();
+  let opened: ControllerStore | undefined;
+  try {
+    expect(() => {
+      opened = new ControllerStore(path);
+    }).toThrow("Database requires a newer controller");
+  } finally {
+    opened?.close();
+  }
+});
 it("fails closed before recovering an invalid persisted turn", () => {
   const { root, store } = open();
   const thread = store.createThread("owner", {

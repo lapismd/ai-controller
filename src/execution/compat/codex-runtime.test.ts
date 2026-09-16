@@ -307,6 +307,33 @@ it("rejects conflicting native MCP environments before starting a process", asyn
   expect(spawn).not.toHaveBeenCalled();
 });
 
+it("rejects MCP URL elicitations as unsupported instead of inventing approval fields", async () => {
+  const host = new MemoryProcessHost();
+  const session = await new CodexNativeRuntime(host).start({ prompt: "" });
+  try {
+    host.handle.emit(
+      `${JSON.stringify({
+        id: "url-elicit",
+        method: "mcpServer/elicitation/request",
+        params: {
+          mode: "url",
+          url: "https://example.test/consent",
+          message: "Open consent",
+        },
+      })}\n`,
+    );
+    await vi.waitFor(() =>
+      expect(host.handle.writes.map((line) => JSON.parse(line))).toContainEqual(
+        {
+          id: "url-elicit",
+          error: { code: -32601, message: "Unsupported provider request" },
+        },
+      ),
+    );
+  } finally {
+    await session.close();
+  }
+});
 it("rejects unsupported server requests so native tools cannot hang silently", async () => {
   const host = new MemoryProcessHost();
   const session = await new CodexNativeRuntime(host).start({ prompt: "" });

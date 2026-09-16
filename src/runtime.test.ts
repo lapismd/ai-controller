@@ -453,6 +453,12 @@ it("rejects resumed threads when application scope bindings change", async () =>
       await expect(attempt).rejects.toMatchObject({ code: "binding_mismatch" });
     }
     binding = original;
+    const restricted = runtime.resume(id, { restricted: true });
+    void restricted.then(
+      (session) => session.close(),
+      () => {},
+    );
+    await expect(restricted).rejects.toMatchObject({ code: "binding_mismatch" });
     const resumed = await runtime.resume(id);
     await resumed.close();
   } finally {

@@ -207,4 +207,14 @@ it("maps empty MCP elicitation forms to one-time approval without inventing fiel
       },
     }),
   ).toBeNull();
+  expect(
+    approvalRequestFromServerRequest({
+      ...message,
+      params: {
+        ...message.params,
+        mode: "url",
+        url: "https://example.test/consent",
+      },
+    }),
+  ).toBeNull();
 });

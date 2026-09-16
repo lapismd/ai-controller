@@ -312,7 +312,13 @@ export class ControllerStore {
     const privateTurn =
       this.thread(turn.threadId)!.payloadPolicy === "metadata-only";
     const stored = privateTurn
-      ? { ...turn, text: undefined, parts: undefined, output: undefined }
+      ? {
+          ...turn,
+          text: undefined,
+          parts: undefined,
+          output: undefined,
+          error: durableErrorCode(turn.error),
+        }
       : turn;
     this.#db
       .prepare(
@@ -634,6 +640,10 @@ export class ControllerStore {
       );
     return sequence;
   }
+}
+function durableErrorCode(error?: string): string | undefined {
+  if (!error) return undefined;
+  return /^[a-z0-9_]{1,64}$/.test(error) ? error : "execution_failed";
 }
 function decode<T>(row: unknown): T | undefined {
   return row ? (JSON.parse((row as Row).body) as T) : undefined;

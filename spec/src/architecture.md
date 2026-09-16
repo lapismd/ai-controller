@@ -118,6 +118,16 @@ selection or requiring additional global agent binaries.
 Startup validates all retained record shapes before recovery starts external work.
 Unsupported database versions and malformed records fail closed with payload-free
 errors. Metadata-only preparation markers have their own retained schema.
+Metadata-only turns persist only short error codes, never exception text.
+
+A handshake with an unsupported protocol version fails as `protocol_unsupported`
+before token comparison. Two configured identities for one physical workspace
+fail as `workspace_alias`. Restricted-mode, endpoint and retention mismatches
+fail reattachment as `binding_mismatch`.
+
+CLI `CliError` codes keep their exit class. Service-manager unavailability uses
+exit 3; usage and request failures use exit 2. Secrets still require an explicit
+`token show` command.
 
 Native external MCP processes receive explicit environment-name allowlists and
 required startup. Values remain in the native process environment, not argv.

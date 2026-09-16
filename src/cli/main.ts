@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { ControllerClient } from "../client.js";
 import { ControllerError } from "../contracts.js";
+import { cliFailure } from "./types.js";
 import { startService } from "../service.js";
 import {
   defaultConfigPath,
@@ -163,28 +164,17 @@ export async function runCli(
     write(command, await client.request(request.method, request.params));
     return 0;
   } catch (error) {
-    const code =
-      error instanceof ControllerError ? error.code : "invalid_arguments";
-    const message =
-      error instanceof ControllerError ||
-      (error instanceof Error &&
-        /^Unknown |requires |--|.* requires --/.test(error.message))
-        ? (error as Error).message
-        : "Command failed; check configuration and service availability";
+    const failure = cliFailure(error);
     if (json)
       io.stdout(
         JSON.stringify({
           schema: "lapis-ai-controller.cli/1",
           ok: false,
-          error: { code, message },
+          error: { code: failure.code, message: failure.message },
         }),
       );
-    else io.stderr(`Error [${code}]: ${message}`);
-    return ["disconnected", "connection_failed", "connection_timeout"].includes(
-      code,
-    )
-      ? 3
-      : 2;
+    else io.stderr(`Error [${failure.code}]: ${failure.message}`);
+    return failure.exitCode;
   } finally {
     client?.dispose();
   }

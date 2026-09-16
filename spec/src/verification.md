@@ -6,16 +6,16 @@
 | AIC-CORE-002 | Implemented | src/domain/engine.test.ts; workspace identifier serialization |
 | AIC-CORE-003 | Implemented | src/persistence/store.test.ts; conservative unknown and interruption states |
 | AIC-CORE-004 | Implemented | src/persistence/store.test.ts; src/transport/server.test.ts |
-| AIC-CORE-005 | Implemented | src/persistence/store.test.ts; private command, output, preparation and tool payloads |
-| AIC-CORE-006 | Planned | Implementation and tests tracked in spec/records/migration.md |
-| AIC-TOOL-001 | Planned | Implementation and tests tracked in spec/records/migration.md |
-| AIC-TOOL-002 | Planned | Implementation and tests tracked in spec/records/migration.md |
-| AIC-MEM-001 | Planned | Implementation and tests tracked in spec/records/migration.md |
-| AIC-MEM-002 | Planned | Implementation and tests tracked in spec/records/migration.md |
-| AIC-MEM-003 | Planned | Implementation and tests tracked in spec/records/migration.md |
-| AIC-API-001 | Planned | Implementation and tests tracked in spec/records/migration.md |
-| AIC-API-002 | Planned | Implementation and tests tracked in spec/records/migration.md |
-| AIC-CLI-001 | Planned | Implementation and tests tracked in spec/records/migration.md |
+| AIC-CORE-005 | Implemented | src/persistence/store.test.ts; private command, output, preparation, tool payloads and diagnostic exceptions |
+| AIC-CORE-006 | Implemented | src/service.test.ts; src/persistence/store.test.ts; src/runtime.test.ts restricted reattachment |
+| AIC-TOOL-001 | Implemented | src/domain/engine.test.ts; src/transport/server.test.ts |
+| AIC-TOOL-002 | Implemented | src/domain/engine.test.ts; src/execution/compat/app-server-protocol.test.ts |
+| AIC-MEM-001 | Implemented | src/transport/server.test.ts; src/memory/lapis/native-memory-service.test.ts |
+| AIC-MEM-002 | Implemented | src/memory/recall.test.ts; src/transport/server.test.ts |
+| AIC-MEM-003 | Implemented | src/memory/lapis/native-memory-service.test.ts; src/memory/group/service.test.ts |
+| AIC-API-001 | Implemented | src/transport/server.test.ts; src/runtime.test.ts |
+| AIC-API-002 | Implemented | src/transport/server.test.ts; src/persistence/store.test.ts |
+| AIC-CLI-001 | Implemented | src/cli/cli.test.ts; docs/cli/reference.md |
 | AIC-PKG-001 | Implemented | scripts/check-boundaries.mjs; pnpm publint |
 | AIC-GOV-001 | Implemented | pnpm spec:check |
 | AIC-GOV-002 | Implemented | pnpm spec:check |

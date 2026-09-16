@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { parseArgs, COMMANDS, markdownHelp } from "./commands.js";
 import { runCli } from "./main.js";
 import { human } from "./output.js";
+import { CliError, cliFailure } from "./types.js";
 import { initialize } from "./config.js";
 import { ControllerStore } from "../persistence/store.js";
 import { Controller } from "../domain/engine.js";
@@ -67,6 +68,13 @@ describe("operator interface", () => {
       }),
     ).toBe(2);
     expect(JSON.parse(output[0]!).error.code).toBe("invalid_arguments");
+    expect(
+      cliFailure(new CliError("unavailable", "The user-service manager is unavailable", 3)),
+    ).toEqual({
+      code: "unavailable",
+      message: "The user-service manager is unavailable",
+      exitCode: 3,
+    });
   });
 });
 

@@ -79,14 +79,15 @@ export async function serveController(
             "Request identity is invalid",
           );
         if (!principal) {
-          if (
-            request.method !== "hello" ||
-            request.protocol !== PROTOCOL ||
-            typeof request.token !== "string"
-          )
+          if (request.method !== "hello" || typeof request.token !== "string")
             throw new ControllerError(
               "authentication_failed",
               "Handshake rejected",
+            );
+          if (request.protocol !== PROTOCOL)
+            throw new ControllerError(
+              "protocol_unsupported",
+              "Unsupported controller protocol",
             );
           const digest = (text: string) =>
             createHash("sha256").update(text).digest();
@@ -314,7 +315,13 @@ export async function serveController(
                 : "Controller request failed",
           },
         });
-        if (!principal) socket.close(4401, "authentication_failed");
+        if (!principal)
+          socket.close(
+            code === "protocol_unsupported" ? 4402 : 4401,
+            code === "protocol_unsupported"
+              ? "protocol_unsupported"
+              : "authentication_failed",
+          );
       } finally {
         inFlight--;
       }

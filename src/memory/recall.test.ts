@@ -83,4 +83,17 @@ describe("extracted memory policy", () => {
       ).blocks,
     ).toEqual([]);
   });
+  it("truncates Nostr memories instead of skipping them over budget", async () => {
+    const result = await recallMemory(
+      {
+        profile: "nostr-v1",
+        candidates: async () => [candidate("long", "y".repeat(5000))],
+        authorize: async () => true,
+      },
+      "query",
+    );
+    expect(result.blocks).toHaveLength(1);
+    expect(result.blocks[0]?.content).toContain("…");
+    expect(result.blocks[0]?.content.length).toBeLessThan(4000);
+  });
 });

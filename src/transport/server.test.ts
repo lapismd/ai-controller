@@ -356,6 +356,113 @@ it("cancels a remote tool handler and retains its unknown outcome without redisp
     store.close();
   }
 });
+it("rejects an unsupported handshake protocol before authenticating", async () => {
+  const store = new ControllerStore(":memory:");
+  const controller = new Controller(store, new Map());
+  const server = await serveController(controller, {
+    credentials: [
+      {
+        token,
+        principal: { id: "owner", providers: ["fake"], workspaces: ["root"] },
+      },
+    ],
+  });
+  const { WebSocket } = await import("ws");
+  const socket = new WebSocket(server.url);
+  try {
+    await new Promise<void>((resolve, reject) => {
+      socket.once("open", () => resolve());
+      socket.once("error", reject);
+    });
+    const reply = new Promise<{ error?: { code: string } }>((resolve) => {
+      socket.once("message", (raw) =>
+        resolve(JSON.parse(String(raw)) as { error?: { code: string } }),
+      );
+    });
+    socket.send(
+      JSON.stringify({
+        id: "hello",
+        method: "hello",
+        protocol: "lapis-ai-host/1",
+        token,
+      }),
+    );
+    await expect(reply).resolves.toMatchObject({
+      error: { code: "protocol_unsupported" },
+    });
+  } finally {
+    socket.close();
+    await server.close();
+    await controller.close();
+    store.close();
+  }
+});
+it("omits recall after a memory endpoint is disposed", async () => {
+  const store = new ControllerStore(":memory:");
+  const controller = new Controller(
+    store,
+    new Map([
+      [
+        "fake",
+        {
+          capabilities: {
+            driver: "fake",
+            content: ["text" as const],
+            configuration: false,
+            resume: "none" as const,
+            approvals: false,
+            input: false,
+            tools: true,
+          },
+          close: async () => {},
+          execute: async (c) => {
+            await c.emit({ type: "completed" });
+          },
+        },
+      ],
+    ]),
+  );
+  const server = await serveController(controller, {
+    credentials: [
+      {
+        token,
+        principal: { id: "owner", providers: ["fake"], workspaces: ["root"] },
+      },
+    ],
+  });
+  const client = new ControllerClient({ url: server.url, token });
+  try {
+    const dispose = await client.registerEndpoint({
+      id: "memories",
+      memory: { profile: "lapis-v1" },
+      handle: async () => [],
+    });
+    const thread = await client.createThread({
+      provider: "fake",
+      workspace: "root",
+      memoryEndpoint: "memories",
+    });
+    await dispose();
+    const receipt = await client.submit({
+      threadId: thread.id,
+      commandId: "after-dispose",
+      text: "authored text",
+    });
+    await controller.drain();
+    expect(store.turn(receipt.turnId)?.state).toBe("completed");
+    expect(store.preparation(receipt.turnId)?.omitted).toContain(
+      "__memory.memories:unavailable",
+    );
+    await expect(
+      controller.readMemory("owner", thread.id, "get", { ref: "record" }),
+    ).rejects.toMatchObject({ code: "memory_unavailable" });
+  } finally {
+    client.dispose();
+    await server.close();
+    await controller.close();
+    store.close();
+  }
+});
 it("replays journal pages before live output and retries a failed domain commit at the same event", async () => {
   const store = new ControllerStore(":memory:");
   const controller = new Controller(store, new Map());

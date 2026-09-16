@@ -173,11 +173,13 @@ export function approvalRequestFromServerRequest(
   if (method === "mcpServer/elicitation/request") {
     const schema = asRecord(request.requestedSchema);
     if (
+      request.mode === "url" ||
       request.mode !== "form" ||
       schema.type !== "object" ||
       !schema.properties ||
       Object.keys(asRecord(schema.properties)).length > 0 ||
-      (Array.isArray(schema.required) && schema.required.length > 0)
+      (Array.isArray(schema.required) && schema.required.length > 0) ||
+      request.url !== undefined
     )
       return null;
     return {

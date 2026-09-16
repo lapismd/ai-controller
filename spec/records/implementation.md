@@ -112,3 +112,18 @@ loads Community as a fifth default plugin, while specification/unit/packaged
 acceptance require four. A user choice is pending. Browser and paid-provider
 acceptance are recorded separately below as they complete. Release readiness is
 not established by the passing unit/build lanes alone.
+
+## Spec-completeness checkpoint
+
+Canonical verification now records every AIC-* requirement as Implemented with
+in-repo evidence. Handshake protocol mismatches fail as `protocol_unsupported`
+before token comparison. CLI unavailable-service errors keep exit class 3.
+Metadata-only journals persist only error codes. Workspace aliases, unsupported
+database versions, restricted-mode reattachment, memory-endpoint disposal, Nostr
+truncation, group forget exclusions, observational native tool activity and
+URL-action MCP elicitations have focused regressions.
+
+First-party Lapis execution already uses the shared SDK and managed child. Nostr
+execution uses the same SDK; live recall still needs a controller memory
+endpoint. Publication, registry lockfile refresh, installed-service deployment
+and paid-provider acceptance remain later approved gates.
