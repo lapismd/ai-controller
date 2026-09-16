@@ -2,6 +2,9 @@ export class AsyncEventQueue<T> implements AsyncIterable<T> {
   readonly #values: T[] = [];
   readonly #waiters: Array<(result: IteratorResult<T>) => void> = [];
   #closed = false;
+  #error?: Error;
+
+  constructor(readonly maximum = 2000) {}
 
   push(value: T): void {
     if (this.#closed) return;
@@ -10,7 +13,12 @@ export class AsyncEventQueue<T> implements AsyncIterable<T> {
       waiter({ value, done: false });
       return;
     }
-    this.#values.push(value);
+    if (this.#values.length >= this.maximum) {
+      this.#error = new Error(
+        "Event observer overflow; reconnect and read the retained transcript",
+      );
+      this.close();
+    } else this.#values.push(value);
   }
 
   close(): void {
@@ -27,7 +35,10 @@ export class AsyncEventQueue<T> implements AsyncIterable<T> {
         yield this.#values.shift() as T;
         continue;
       }
-      if (this.#closed) return;
+      if (this.#closed) {
+        if (this.#error) throw this.#error;
+        return;
+      }
       const next = await new Promise<IteratorResult<T>>((resolve) => {
         this.#waiters.push(resolve);
       });

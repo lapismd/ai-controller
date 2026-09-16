@@ -25,6 +25,7 @@ type Subscription = {
   snapshot?: Snapshot;
   buffered: ControllerEvent[];
   initializing: boolean;
+  synchronizing?: Promise<void>;
   listeners: Set<(snapshot: Snapshot, event?: ControllerEvent) => void>;
 };
 export class ControllerClient {
@@ -50,6 +51,7 @@ export class ControllerClient {
       timeoutMs?: number;
       websocket?: typeof WebSocket;
       onState?(state: "connecting" | "ready" | "offline" | "closed"): void;
+      onError?(error: Error): void;
     },
   ) {}
   async connect(): Promise<void> {
@@ -119,7 +121,7 @@ export class ControllerClient {
     await this.connect();
     if (!subscription.snapshot || subscription.initializing)
       await this.synchronize(threadId, subscription);
-    else listener(structuredClone(subscription.snapshot));
+    else this.notify(subscription, listener);
     return () => {
       subscription!.listeners.delete(listener);
       if (!subscription!.listeners.size) {
@@ -240,7 +242,10 @@ export class ControllerClient {
     if (this.#socket !== socket || this.#disposed) return;
     let frame: Record<string, unknown>;
     try {
-      frame = JSON.parse(raw) as Record<string, unknown>;
+      const value: unknown = JSON.parse(raw);
+      if (!value || typeof value !== "object" || Array.isArray(value))
+        throw new Error("Invalid frame");
+      frame = value as Record<string, unknown>;
     } catch {
       socket.close(4400, "invalid_frame");
       return;
@@ -256,15 +261,41 @@ export class ControllerClient {
       else pending.resolve(frame.result);
     } else if (frame.type === "event") {
       const event = frame.event as ControllerEvent;
+      if (
+        !event ||
+        typeof event.threadId !== "string" ||
+        typeof event.cursor !== "string" ||
+        typeof event.type !== "string" ||
+        !event.data ||
+        typeof event.data !== "object"
+      ) {
+        socket.close(4400, "invalid_event");
+        return;
+      }
       const subscription = this.#subscriptions.get(event.threadId);
       if (!subscription) return;
       if (subscription.initializing) {
         subscription.buffered.push(event);
         if (subscription.buffered.length > 1000)
           socket.close(4408, "resnapshot_required");
-      } else this.apply(subscription, event);
+      } else {
+        try {
+          this.apply(subscription, event);
+        } catch {
+          socket.close(4408, "resnapshot_required");
+        }
+      }
     } else if (frame.type === "endpoint.request") {
       const request = frame.request as EndpointRequest;
+      if (
+        !request ||
+        typeof request.endpoint !== "string" ||
+        typeof request.operation !== "string" ||
+        !Number.isFinite(request.deadline)
+      ) {
+        socket.close(4400, "invalid_endpoint_request");
+        return;
+      }
       const endpoint = this.#endpoints.get(request.endpoint);
       void (async () => {
         let result: Json = null;
@@ -290,7 +321,20 @@ export class ControllerClient {
     const { handle: _handle, ...manifest } = registration;
     await this.send("endpoints.register", manifest);
   }
-  private async synchronize(
+  private synchronize(
+    threadId: string,
+    subscription: Subscription,
+  ): Promise<void> {
+    if (subscription.synchronizing) return subscription.synchronizing;
+    subscription.synchronizing = this.synchronizeOnce(
+      threadId,
+      subscription,
+    ).finally(() => {
+      subscription.synchronizing = undefined;
+    });
+    return subscription.synchronizing;
+  }
+  private async synchronizeOnce(
     threadId: string,
     subscription: Subscription,
   ): Promise<void> {
@@ -305,7 +349,7 @@ export class ControllerClient {
     for (const event of subscription.buffered.splice(0))
       this.apply(subscription, event);
     for (const listener of subscription.listeners)
-      listener(structuredClone(subscription.snapshot));
+      this.notify(subscription, listener);
   }
   private apply(subscription: Subscription, event: ControllerEvent): void {
     if (
@@ -315,7 +359,22 @@ export class ControllerClient {
       return;
     subscription.snapshot = reduceSnapshot(subscription.snapshot, event);
     for (const listener of subscription.listeners)
-      listener(structuredClone(subscription.snapshot), event);
+      this.notify(subscription, listener, event);
+  }
+  private notify(
+    subscription: Subscription,
+    listener: (snapshot: Snapshot, event?: ControllerEvent) => void,
+    event?: ControllerEvent,
+  ): void {
+    try {
+      listener(structuredClone(subscription.snapshot!), event);
+    } catch (error) {
+      this.options.onError?.(
+        error instanceof Error
+          ? error
+          : new Error("Subscription observer failed"),
+      );
+    }
   }
   private failPending(): void {
     for (const item of this.#pending.values()) {
@@ -352,6 +411,17 @@ export function reduceSnapshot(
   const next = structuredClone(snapshot);
   next.cursor = event.cursor;
   const data = event.data as Record<string, Json>;
+  if (event.type === "thread.configured") {
+    next.thread.version = Number(data.version);
+    next.thread.configuration = data.configuration as Thread["configuration"];
+  }
+  if (event.type === "output.activity" || event.type === "output.text") {
+    next.transcript.push(event);
+    if (next.transcript.length > 2000) {
+      next.transcript.shift();
+      next.transcriptTruncated = true;
+    }
+  }
   if (
     event.type === "session.bound" &&
     typeof data.nativeSessionId === "string"

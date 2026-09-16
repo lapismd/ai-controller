@@ -7,6 +7,11 @@ import {
 } from "@lapismd/ai-host";
 import { ControllerError, type Capabilities, type Json } from "../contracts.js";
 import type { ExecutionContext, ExecutionProvider } from "../domain/ports.js";
+import {
+  mapAcpRuntimeEvent,
+  mapAcpPermissionRequest,
+  mapApprovalOptionToAcpDecision,
+} from "./compat/acp-event-mapper.js";
 
 interface ActiveSession {
   sessionId: string;
@@ -25,6 +30,11 @@ export class AcpProvider implements ExecutionProvider {
     configuration: true,
     resume: "context",
     approvals: true,
+    approvalFeatures: {
+      persistentDecisions: true,
+      granularPermissions: true,
+      policyAmendments: false,
+    },
     input: false,
     tools: true,
   };
@@ -226,12 +236,12 @@ export class AcpProvider implements ExecutionProvider {
         if (frame.event.type === "permission") {
           const request = frame.event.request ?? {};
           const nativeId = String(request.requestId ?? request.id ?? "");
-          const options = Array.isArray(request.options) ? request.options : [];
+          const normalized = mapAcpPermissionRequest(request);
           void context
             .interact(
               "approval",
               nativeId,
-              { ...request, options } as Json,
+              normalized as unknown as Json,
               Date.now() + 15 * 60_000,
             )
             .then(
@@ -239,7 +249,7 @@ export class AcpProvider implements ExecutionProvider {
                 this.#executor.respondAcpSession(
                   frame.sessionId,
                   nativeId,
-                  String(value),
+                  mapApprovalOptionToAcpDecision(String(value)),
                 ),
               () =>
                 this.#executor.respondAcpSession(
@@ -260,10 +270,14 @@ export class AcpProvider implements ExecutionProvider {
         }
         const event = frame.event.event ?? {};
         const type = String(event.type ?? "");
-        if (["text_delta", "text"].includes(type))
+        const normalized = mapAcpRuntimeEvent({ ...event, type });
+        if (normalized?.type === "text" || type === "text")
           await context.emit({
             type: "text",
-            text: String(event.text ?? event.delta ?? ""),
+            text:
+              normalized?.type === "text"
+                ? normalized.text
+                : String(event.text ?? event.delta ?? ""),
             sourceId,
           });
         else if (["done", "completed"].includes(type)) {
@@ -279,7 +293,10 @@ export class AcpProvider implements ExecutionProvider {
         } else
           await context.emit({
             type: "activity",
-            data: event as Json,
+            data: (normalized ?? {
+              type: "status",
+              status: "Provider activity unavailable in the normalized schema",
+            }) as unknown as Json,
             sourceId,
           });
       })

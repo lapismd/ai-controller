@@ -96,6 +96,8 @@ export interface Snapshot {
   turns: Turn[];
   interactions: Interaction[];
   cursor: string;
+  transcript: ControllerEvent[];
+  transcriptTruncated: boolean;
 }
 export interface ContextBlock {
   id: string;
@@ -148,6 +150,11 @@ export interface Capabilities {
   configuration: boolean;
   resume: "none" | "context" | "history" | "active";
   approvals: boolean;
+  approvalFeatures?: {
+    persistentDecisions: boolean;
+    granularPermissions: boolean;
+    policyAmendments: boolean;
+  };
   input: boolean;
   tools: boolean;
 }

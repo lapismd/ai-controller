@@ -202,6 +202,33 @@ function commandRequest(
   switch (command) {
     case "providers list":
       return { method: "providers.list", params: {} };
+    case "providers models":
+      return {
+        method: "providers.models",
+        params: { provider: o.provider, workspace: o.workspace },
+      };
+    case "threads configure":
+      return {
+        method: "threads.configure",
+        params: {
+          threadId: o.thread,
+          version: Number(o["expected-version"]),
+          configuration: JSON.parse(String(o.configuration)),
+        },
+      };
+    case "events read":
+      return {
+        method: "events.read",
+        params: {
+          threadId: o.thread,
+          after: o.after,
+          ...(o.limit ? { limit: Number(o.limit) } : {}),
+        },
+      };
+    case "interactions list":
+      return { method: "interactions.list", params: { threadId: o.thread } };
+    case "tools list":
+      return { method: "tools.list", params: { threadId: o.thread } };
     case "threads list":
       return { method: "threads.list", params: {} };
     case "threads create":

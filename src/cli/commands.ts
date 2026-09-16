@@ -55,6 +55,37 @@ export const COMMANDS: CommandSpec[] = [
     options: [],
   },
   {
+    path: "providers models",
+    summary: "Discover models from an authorized provider instance.",
+    options: ["provider", "workspace"],
+    required: ["provider", "workspace"],
+  },
+  {
+    path: "threads configure",
+    summary:
+      "Save configuration for subsequent turns using a current thread version.",
+    options: ["thread", "expected-version", "configuration"],
+    required: ["thread", "expected-version", "configuration"],
+  },
+  {
+    path: "events read",
+    summary: "Read a bounded page of retained committed events after a cursor.",
+    options: ["thread", "after", "limit"],
+    required: ["thread", "after"],
+  },
+  {
+    path: "interactions list",
+    summary: "Inspect approvals, questions and application tool outcomes.",
+    options: ["thread"],
+    required: ["thread"],
+  },
+  {
+    path: "tools list",
+    summary: "Inspect the authorized tool manifest and endpoint availability.",
+    options: ["thread"],
+    required: ["thread"],
+  },
+  {
     path: "threads list",
     summary: "List owned execution threads.",
     options: [],

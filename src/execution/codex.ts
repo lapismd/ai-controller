@@ -21,6 +21,11 @@ export class CodexProvider implements ExecutionProvider {
     configuration: true,
     resume: "context",
     approvals: true,
+    approvalFeatures: {
+      persistentDecisions: true,
+      granularPermissions: true,
+      policyAmendments: true,
+    },
     input: true,
     tools: true,
   };

@@ -312,6 +312,44 @@ function dispatch(
   if (targetThread && !allowed(store.authorizeThread(owner, targetThread)))
     throw new ControllerError("not_found", "Thread not found");
   switch (method) {
+    case "interactions.list":
+      store.authorizeThread(owner, String(p.threadId));
+      return store.interactions(String(p.threadId));
+    case "tools.list":
+      return controller.inspectTools(owner, String(p.threadId));
+    case "threads.configure": {
+      const thread = store.authorizeThread(owner, String(p.threadId));
+      if (
+        !controller.providers.get(thread.provider)?.capabilities.configuration
+      )
+        throw new ControllerError(
+          "unsupported_configuration",
+          "Provider does not support configuration",
+        );
+      return store.configure(
+        owner,
+        thread.id,
+        Number(p.version),
+        p.configuration as import("../contracts.js").ProviderConfig,
+      );
+    }
+    case "providers.models": {
+      if (
+        !principal.providers.includes(String(p.provider)) ||
+        !principal.workspaces.includes(String(p.workspace))
+      )
+        throw new ControllerError(
+          "forbidden",
+          "Provider or workspace is not authorized",
+        );
+      const provider = controller.providers.get(String(p.provider));
+      if (!provider?.models)
+        throw new ControllerError(
+          "unsupported_discovery",
+          "Provider does not support model discovery",
+        );
+      return provider.models(String(p.workspace));
+    }
     case "system.status":
       return {
         protocol: PROTOCOL,

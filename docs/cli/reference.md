@@ -86,6 +86,36 @@ List authorized providers and capabilities.
 
 Options: global options only.
 
+## providers models
+
+Discover models from an authorized provider instance.
+
+Options: `--provider`, `--workspace`.
+
+## threads configure
+
+Save configuration for subsequent turns using a current thread version.
+
+Options: `--thread`, `--expected-version`, `--configuration`.
+
+## events read
+
+Read a bounded page of retained committed events after a cursor.
+
+Options: `--thread`, `--after`, `--limit`.
+
+## interactions list
+
+Inspect approvals, questions and application tool outcomes.
+
+Options: `--thread`.
+
+## tools list
+
+Inspect the authorized tool manifest and endpoint availability.
+
+Options: `--thread`.
+
 ## threads list
 
 List owned execution threads.

@@ -101,3 +101,25 @@ suite. Deno type checks passed using `artifacts/controller/deno.json`, which
 preserves the existing local import map and links the unpublished controller.
 Normal registry-only consumer installation cannot resolve the new package until
 publication. No registry lockfile entry or integrity has been fabricated.
+
+## Session facade and management checkpoint
+
+The browser-safe runtime facade now consumes ordered committed transcript events,
+reconnects without replaying execution, and resolves lost prompt acknowledgements
+by command identity. It rejects concurrent submissions before acknowledgement and
+reports provider approval capabilities conservatively. ACP reasoning and tool
+activity use the shared normalized event mapper. The CLI exposes model discovery,
+optimistic thread configuration, paginated event reads, tool manifests and live
+interaction inspection. Observer queues and transcript snapshots are bounded.
+
+Verification: 39 controller tests pass, including facade reconnect during approval,
+lost-ACK/concurrent-send regression, configuration conflicts and authenticated CLI
+management. Type/boundary checks, build, specification checks, publint, Deno compile
+and compiled restart/shutdown smoke pass. A configuration-fixture failure was
+corrected by emitting the provider's accepted activity before waiting for abort;
+no production assertion or behavior was relaxed.
+
+The Nostr memory extraction additionally passes the disposable relay-stack test:
+13 plugins, hydration, roles, managed-agent restart reconnect, persistence and
+Keytr reset/verification. This test uses the locally compiled controller adapter;
+it does not establish completion of the execution migration.

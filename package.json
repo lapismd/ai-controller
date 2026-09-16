@@ -33,6 +33,10 @@
     "./memory/group": {
       "types": "./dist/memory/group/index.d.ts",
       "import": "./dist/memory/group/index.js"
+    },
+    "./runtime": {
+      "types": "./dist/runtime.d.ts",
+      "import": "./dist/runtime.js"
     }
   },
   "scripts": {

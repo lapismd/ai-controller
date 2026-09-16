@@ -12,7 +12,7 @@ for (const path of files.filter((path) => path.endsWith(".ts"))) {
 }
 // A browser bundle is also an executable import-boundary check.
 await build({
-  entryPoints: ["src/client.ts", "src/contracts.ts"],
+  entryPoints: ["src/client.ts", "src/contracts.ts", "src/runtime.ts"],
   outdir: "dist/browser-check",
   bundle: true,
   platform: "browser",

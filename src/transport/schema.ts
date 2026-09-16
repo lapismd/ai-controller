@@ -15,6 +15,20 @@ const stringArray = { type: "array", items: string, maxItems: 100 };
 const schemas: Record<string, object> = {
   "system.status": object({}),
   "providers.list": object({}),
+  "interactions.list": object({ threadId: string }, ["threadId"]),
+  "tools.list": object({ threadId: string }, ["threadId"]),
+  "providers.models": object({ provider: string, workspace: string }, [
+    "provider",
+    "workspace",
+  ]),
+  "threads.configure": object(
+    {
+      threadId: string,
+      version: { type: "integer", minimum: 1 },
+      configuration: config,
+    },
+    ["threadId", "version", "configuration"],
+  ),
   "threads.create": object(
     {
       id: string,

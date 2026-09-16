@@ -23,7 +23,9 @@ export type {
 export {
   extractDeterministicCandidates,
   isSecretBearingMemoryText,
+  __candidateExtractorInternals,
 } from "./candidate-extractor.js";
+export type { CandidateExtractionResult, CandidateExtractionOptions } from "./candidate-extractor.js";
 export {
   canonicalJson,
   deterministicMemoryId,

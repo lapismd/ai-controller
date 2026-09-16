@@ -171,6 +171,39 @@ export class ControllerStore {
       );
     });
   }
+  configure(
+    owner: string,
+    threadId: string,
+    version: number,
+    configuration: import("../contracts.js").ProviderConfig,
+  ): Thread {
+    return this.transaction(() => {
+      const thread = this.authorizeThread(owner, threadId);
+      if (thread.version !== version)
+        throw new ControllerError(
+          "version_conflict",
+          "Thread configuration changed",
+        );
+      if (this.turns(threadId).some((turn) => !isTerminal(turn.state)))
+        throw new ControllerError(
+          "thread_busy",
+          "Configure the thread after pending turns finish",
+        );
+      const next = { ...thread, version: version + 1, configuration };
+      this.#db
+        .prepare("UPDATE threads SET body=? WHERE id=?")
+        .run(JSON.stringify(next), threadId);
+      this.append(
+        threadId,
+        "thread.configured",
+        { version: next.version, configuration: next.configuration as Json },
+        undefined,
+        undefined,
+        true,
+      );
+      return next;
+    });
+  }
   authorizeThread(owner: string, id: string): Thread {
     const thread = this.thread(id);
     if (!thread || thread.owner !== owner)
@@ -452,6 +485,7 @@ export class ControllerStore {
       thread: this.authorizeThread(owner, threadId),
       turns: this.turns(threadId),
       interactions: this.interactions(threadId),
+      ...this.transcriptSnapshot(threadId),
       cursor: this.cursor(
         Number(
           this.#db
@@ -460,6 +494,28 @@ export class ControllerStore {
         ),
       ),
     }));
+  }
+  private transcriptSnapshot(threadId: string): {
+    transcript: ControllerEvent[];
+    transcriptTruncated: boolean;
+  } {
+    const rows = this.#db
+      .prepare(
+        "SELECT sequence,body FROM events WHERE thread_id=? AND json_extract(body,'$.type') IN ('output.activity','output.text') ORDER BY sequence DESC LIMIT 2001",
+      )
+      .all(threadId) as unknown as EventRow[];
+    const transcriptTruncated = rows.length > 2000;
+    const transcript = rows
+      .slice(0, 2000)
+      .reverse()
+      .map((row) => {
+        const event = JSON.parse(row.body) as ControllerEvent;
+        return structuredClone({
+          ...(this.#volatileEvents.get(event.id) ?? event),
+          cursor: this.cursor(row.sequence),
+        });
+      });
+    return { transcript, transcriptTruncated };
   }
   events(
     owner: string,

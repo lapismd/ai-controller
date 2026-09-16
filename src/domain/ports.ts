@@ -43,6 +43,7 @@ export interface ExecutionContext {
 }
 export interface ExecutionProvider {
   capabilities: Capabilities;
+  models?(workspace: string): Promise<unknown>;
   execute(context: ExecutionContext): Promise<void>;
   close(): Promise<void>;
 }

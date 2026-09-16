@@ -56,3 +56,11 @@ The group-memory compatibility profile shares ranking policy with the vault
 profile and receives scoped evidence/search/mutation ports. It preserves the
 existing partition and record schema. Embedding workers are injected resources;
 this package does not construct a consumer's worker, relay client or signer.
+
+The shared runtime facade exposes application-neutral session events over the SDK.
+It resolves lost turn acknowledgements by command identity and does not retry with
+a fresh command. Consumers register preparation endpoints instead of injecting
+memory twice. ACP thought output is normalized to reasoning activity, separate
+from authored replies. Snapshots include a bounded activity tail and explicitly
+report truncation; complete retained history remains available through replay.
+Thread configuration uses optimistic versions and rejects changes during work.

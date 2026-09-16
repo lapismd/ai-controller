@@ -23,6 +23,22 @@ import type {
 import { recallMemory } from "../memory/recall.js";
 
 export class Controller {
+  inspectTools(owner: string, threadId: string) {
+    const thread = this.store.authorizeThread(owner, threadId);
+    const endpoint = thread.toolEndpoint
+      ? this.#tools.get(`${owner}:${thread.toolEndpoint}`)
+      : undefined;
+    return {
+      available: !thread.toolEndpoint || !!endpoint,
+      memoryAvailable:
+        !thread.memoryEndpoint ||
+        this.#memory.has(`${owner}:${thread.memoryEndpoint}`),
+      definitions: structuredClone([
+        ...(endpoint?.definitions ?? []),
+        ...(thread.memoryEndpoint ? memoryToolDefinitions : []),
+      ]),
+    };
+  }
   readonly #sources = new Map<string, ContextSource>();
   readonly #tools = new Map<string, ToolEndpoint>();
   readonly #memory = new Map<string, MemoryEndpoint>();
