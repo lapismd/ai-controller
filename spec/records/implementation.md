@@ -124,6 +124,7 @@ truncation, group forget exclusions, observational native tool activity and
 URL-action MCP elicitations have focused regressions.
 
 First-party Lapis execution already uses the shared SDK and managed child. Nostr
-execution uses the same SDK; live recall still needs a controller memory
-endpoint. Publication, registry lockfile refresh, installed-service deployment
-and paid-provider acceptance remain later approved gates.
+execution uses the same SDK and registers an owner-scoped `nostr.memory`
+endpoint so the controller owns recall, search, and get. Publication, registry
+lockfile refresh, installed-service deployment and paid-provider acceptance
+remain later approved gates.
