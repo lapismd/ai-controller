@@ -1,0 +1,10 @@
+{
+  "nodeModulesDir": "manual",
+  "tasks": {
+    "check": "pnpm check",
+    "test": "pnpm test",
+    "build": "pnpm build && deno compile -A --exclude-unused-npm --self-extracting --output artifacts/lapis-ai-controller dist/main.js",
+    "serve": "pnpm build && deno run -A dist/main.js serve",
+    "spec:check": "pnpm spec:check"
+  }
+}

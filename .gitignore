@@ -1,0 +1,12 @@
+node_modules/
+dist/
+artifacts/
+.release/
+.local/
+deno.local.json
+pnpm.local.cjs
+spec/book/
+coverage/
+*.tsbuildinfo
+*.log
+.DS_Store
