@@ -16,6 +16,7 @@ import {
 export interface EndpointRegistration {
   id: string;
   context?: boolean;
+  mcp?: boolean;
   required?: boolean;
   tools?: ToolDefinition[];
   memory?: { profile: "lapis-v1" | "nostr-v1" };

@@ -38,6 +38,7 @@ export class AcpProvider implements ExecutionProvider {
     },
     input: false,
     tools: true,
+    externalMcp: true,
   };
   readonly #executor: AgentRuntimeExecutor;
   readonly #sessions = new Map<string, ActiveSession>();
@@ -93,6 +94,7 @@ export class AcpProvider implements ExecutionProvider {
     let session = this.#sessions.get(thread.id);
     const manifest = JSON.stringify({
       tools: context.tools,
+      mcpServers: context.mcpServers ?? [],
       restricted: preparation.configuration.restricted ?? false,
     });
     if (session && session.manifest !== manifest) {
@@ -129,6 +131,7 @@ export class AcpProvider implements ExecutionProvider {
           agent: this.options.agent,
           workspace,
           restricted: preparation.configuration.restricted,
+          mcpServers: context.mcpServers,
           ...(session.bridgeId ? { appToolBridgeId: session.bridgeId } : {}),
         });
         session.sessionId = result.sessionId;

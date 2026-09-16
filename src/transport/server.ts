@@ -1,3 +1,4 @@
+import { validateMcpServers } from "../domain/mcp.js";
 import { createServer } from "node:http";
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { WebSocketServer, type WebSocket } from "ws";
@@ -157,6 +158,20 @@ export async function serveController(
                 signal,
               );
             try {
+              if (input.mcp)
+                disposers.push(
+                  controller.registerMcp(owner, endpointId, {
+                    resolve: async (thread, signal) => {
+                      const value = await call(
+                        "mcp.resolve",
+                        { thread: thread as unknown as Json },
+                        signal,
+                      );
+                      validateMcpServers(value);
+                      return value;
+                    },
+                  }),
+                );
               if (input.memory)
                 disposers.push(
                   controller.registerMemory(owner, endpointId, {

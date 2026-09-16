@@ -1,3 +1,4 @@
+import { validateMcpServers } from "./mcp.js";
 import { randomUUID } from "node:crypto";
 import { Ajv } from "ajv";
 import {
@@ -19,6 +20,7 @@ import type {
   RuntimeEvent,
   ToolEndpoint,
   MemoryEndpoint,
+  McpEndpoint,
 } from "./ports.js";
 import { recallMemory } from "../memory/recall.js";
 
@@ -39,6 +41,7 @@ export class Controller {
       ]),
     };
   }
+  readonly #mcp = new Map<string, McpEndpoint>();
   readonly #sources = new Map<string, ContextSource>();
   readonly #tools = new Map<string, ToolEndpoint>();
   readonly #memory = new Map<string, MemoryEndpoint>();
@@ -61,6 +64,13 @@ export class Controller {
   start(): void {
     this.store.recover();
     this.schedule();
+  }
+  registerMcp(owner: string, id: string, endpoint: McpEndpoint): () => void {
+    const key = `${owner}:${id}`;
+    this.#mcp.set(key, endpoint);
+    return () => {
+      if (this.#mcp.get(key) === endpoint) this.#mcp.delete(key);
+    };
   }
   registerMemory(
     owner: string,
@@ -311,7 +321,27 @@ export class Controller {
         preparation = await prepareTurn(thread, turn, this.#sources, signal);
         this.store.prepare(turn.id, preparation);
       }
-      await authorizePreparation(thread, preparation, this.#sources, signal);
+      const mcpEndpoint = thread.mcpEndpoint
+        ? this.#mcp.get(`${thread.owner}:${thread.mcpEndpoint}`)
+        : undefined;
+      if (thread.mcpEndpoint && !mcpEndpoint)
+        throw new ControllerError(
+          "mcp_unavailable",
+          "External MCP endpoint is unavailable",
+        );
+      const mcpServers = mcpEndpoint
+        ? await bounded(mcpEndpoint.resolve(thread, signal), 5000, signal)
+        : [];
+      validateMcpServers(mcpServers);
+      if (
+        mcpServers.length &&
+        (!provider.capabilities.externalMcp ||
+          preparation.configuration.restricted)
+      )
+        throw new ControllerError(
+          "mcp_unsupported",
+          "External MCP servers are unsupported for this execution",
+        );
       const endpoint = thread.toolEndpoint
         ? this.#tools.get(`${thread.owner}:${thread.toolEndpoint}`)
         : undefined;
@@ -366,6 +396,7 @@ export class Controller {
           return endpoint.execute(name, input, call);
         },
       };
+      await authorizePreparation(thread, preparation, this.#sources, signal);
       signal.throwIfAborted();
       this.store.transition(turn.id, "dispatching");
       await provider.execute({
@@ -373,6 +404,7 @@ export class Controller {
         turn,
         preparation,
         tools: structuredClone(combined.definitions),
+        mcpServers,
         signal,
         emit: (event) => this.ingest(turn.id, event),
         bindSession: async (id) => this.store.bindSession(thread.id, id),

@@ -93,6 +93,9 @@ export type AgentContextBlock =
   MemoryRecallContextBlock | ConversationHandoffContextBlock;
 
 export type AgentTurnOptions = {
+  /** Called by the controller when this turn is eligible for dispatch. */
+  prepareContext?(signal: AbortSignal): Promise<AgentContextBlock[]>;
+  authorizeContext?(signal: AbortSignal): Promise<boolean>;
   contextBlocks?: AgentContextBlock[];
 };
 
@@ -157,6 +160,7 @@ export type ApprovalCapabilities = {
 };
 
 export type AgentCapabilities = {
+  preparesContext?: boolean;
   sessions: boolean;
   resume: boolean;
   cancel: boolean;

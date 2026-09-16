@@ -25,7 +25,10 @@ export {
   isSecretBearingMemoryText,
   __candidateExtractorInternals,
 } from "./candidate-extractor.js";
-export type { CandidateExtractionResult, CandidateExtractionOptions } from "./candidate-extractor.js";
+export type {
+  CandidateExtractionResult,
+  CandidateExtractionOptions,
+} from "./candidate-extractor.js";
 export {
   canonicalJson,
   deterministicMemoryId,
@@ -42,3 +45,6 @@ export type {
   RuntimeConsolidationConfiguration,
   RuntimeMemoryConsolidationProviderOptions,
 } from "./runtime-consolidation-provider.js";
+
+export * from "./context-handoff.js";
+export * from "./conversation-hashes.js";

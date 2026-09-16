@@ -39,6 +39,7 @@ export interface ThreadInput {
   contextSources?: string[];
   toolEndpoint?: string;
   memoryEndpoint?: string;
+  mcpEndpoint?: string;
 }
 export interface Thread extends ThreadInput {
   id: string;
@@ -146,6 +147,7 @@ export interface Interaction {
   deadline: number;
 }
 export interface Capabilities {
+  externalMcp?: boolean;
   driver: string;
   content: ContentPart["type"][];
   configuration: boolean;

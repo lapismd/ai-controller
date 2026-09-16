@@ -41,6 +41,7 @@ const schemas: Record<string, object> = {
       contextSources: stringArray,
       toolEndpoint: string,
       memoryEndpoint: string,
+      mcpEndpoint: string,
     },
     ["provider", "workspace"],
   ),
@@ -101,6 +102,7 @@ const schemas: Record<string, object> = {
         "profile",
       ]),
       context: { type: "boolean" },
+      mcp: { type: "boolean" },
       required: { type: "boolean" },
       tools: {
         type: "array",

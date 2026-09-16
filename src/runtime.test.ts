@@ -162,6 +162,8 @@ it("rejects concurrent sends before acknowledgement and resolves a lost acknowle
     });
     await first;
     await f.controller.drain();
+    // A server drain is not a client-delivery barrier; observe the committed snapshot.
+    await f.client.snapshot(session.id);
     expect(executions).toBe(1);
     expect(f.store.turns(session.id)).toHaveLength(1);
     await expect(
@@ -245,6 +247,162 @@ it("renders the stored private-payload marker as an explicit transcript gap", as
   } finally {
     await session.close();
     await pump;
+    await f.close();
+  }
+});
+
+it("defers application context until workspace admission and authorizes the prepared revision", async () => {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const seen: ExecutionContext[] = [];
+  const f = await fixture(async (context) => {
+    seen.push(context);
+    if (context.preparation.text === "first") await gate;
+    await context.emit({ type: "completed" });
+  });
+  const first = await f.runtime.start({ prompt: "" });
+  const second = await f.runtime.start({ prompt: "" });
+  let revision = 1;
+  let prepared = 0;
+  let authorized = 0;
+  try {
+    await first.send("first");
+    await expect.poll(() => seen.length).toBe(1);
+    await second.send("second", {
+      prepareContext: async () => {
+        prepared++;
+        return [
+          {
+            kind: "memory-recall",
+            id: "record",
+            content: `revision ${revision}`,
+            metadata: { memoryId: "record", revision, scope: "workspace" },
+          },
+        ];
+      },
+      authorizeContext: async () => {
+        authorized++;
+        return revision === 2;
+      },
+    });
+    expect(prepared).toBe(0);
+    revision = 2;
+    release();
+    await f.controller.drain();
+    expect(prepared).toBe(1);
+    expect(authorized).toBe(1);
+    expect(seen[1]?.preparation.text).toBe("second");
+    expect(seen[1]?.preparation.blocks[0]).toMatchObject({
+      content: "revision 2",
+      revision: "2",
+      kind: "memory",
+      trust: "reference",
+    });
+  } finally {
+    release();
+    await first.close();
+    await second.close();
+    await f.close();
+  }
+});
+
+it("supplies external MCP configuration without persisting its environment", async () => {
+  let observed = false;
+  const f = await fixture(async (context) => {
+    expect(context.mcpServers).toEqual([
+      {
+        name: "external",
+        command: "external-mcp",
+        env: { FIXTURE_SECRET: "mcp-private-test-value" },
+      },
+    ]);
+    observed = true;
+    await context.emit({ type: "completed" });
+  });
+  f.controller.providers.get("test")!.capabilities.externalMcp = true;
+  const session = await f.runtime.start({
+    prompt: "",
+    mcpServers: [
+      {
+        name: "external",
+        command: "external-mcp",
+        env: { FIXTURE_SECRET: "mcp-private-test-value" },
+      },
+    ],
+  });
+  try {
+    await session.send("request");
+    await f.controller.drain();
+    expect(observed).toBe(true);
+    const snapshot = f.store.snapshot("owner", session.id);
+    expect(JSON.stringify(snapshot)).not.toContain("mcp-private-test-value");
+    expect(
+      JSON.stringify(f.store.preparation(snapshot.turns[0]!.id)),
+    ).not.toContain("mcp-private-test-value");
+    expect(
+      JSON.stringify(
+        f.store.events("owner", session.id, `${f.store.epoch}:0`, 1000),
+      ),
+    ).not.toContain("mcp-private-test-value");
+  } finally {
+    await session.close();
+    await f.close();
+  }
+});
+
+it("fails restricted and malformed MCP configuration before executing a provider", async () => {
+  let executions = 0;
+  const f = await fixture(async () => {
+    executions++;
+  });
+  f.controller.providers.get("test")!.capabilities.externalMcp = true;
+  const unregister = await f.client.registerEndpoint({
+    id: "external",
+    mcp: true,
+    handle: async () => [{ name: "mcp", command: "external-mcp" }],
+  });
+  try {
+    const thread = await f.client.createThread({
+      provider: "test",
+      workspace: "workspace",
+      mcpEndpoint: "external",
+      configuration: { restricted: true },
+    });
+    const receipt = await f.client.submit({
+      threadId: thread.id,
+      commandId: "restricted",
+      text: "request",
+    });
+    await f.controller.drain();
+    expect(f.store.turn(receipt.turnId)).toMatchObject({
+      state: "failed",
+      error: "mcp_unsupported",
+    });
+    await unregister();
+    await f.client.registerEndpoint({
+      id: "external",
+      mcp: true,
+      handle: async () => [{ name: "mcp", command: 42 }],
+    });
+    const second = await f.client.createThread({
+      provider: "test",
+      workspace: "workspace",
+      mcpEndpoint: "external",
+    });
+    const invalid = await f.client.submit({
+      threadId: second.id,
+      commandId: "invalid",
+      text: "request",
+    });
+    await f.controller.drain();
+    expect(f.store.turn(invalid.turnId)).toMatchObject({
+      state: "failed",
+      error: "invalid_mcp",
+    });
+    expect(executions).toBe(0);
+  } finally {
     await f.close();
   }
 });

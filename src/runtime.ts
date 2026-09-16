@@ -24,12 +24,7 @@ import type {
   UserInputAnswers,
 } from "./execution/compat/types.js";
 
-export type {
-  AgentEvent,
-  AgentRuntime,
-  AgentSession,
-  AgentRequest,
-} from "./execution/compat/types.js";
+export * from "./execution/compat/types.js";
 export interface ControllerRuntimeOptions {
   id: string;
   client: ControllerClient;
@@ -92,7 +87,7 @@ export class ControllerRuntime implements AgentRuntime {
       (!request.requireApprovals || capabilities.approvals) &&
       (!request.requirePolicyAmendments ||
         !!capabilities.approvalFeatures?.policyAmendments) &&
-      !request.mcpServers?.length
+      (!request.mcpServers?.length || capabilities.externalMcp === true)
     );
   }
   start(request: AgentRequest): Promise<AgentSession> {
@@ -113,16 +108,58 @@ export class ControllerRuntime implements AgentRuntime {
         "unsupported_request",
         "Provider does not support the requested execution contract",
       );
+    const threadId = id ?? crypto.randomUUID();
+    const contextId = `runtime.turn-context.${threadId}`;
+    const mcpId = request.mcpServers?.length
+      ? `runtime.mcp.${threadId}`
+      : undefined;
     const prepared = await this.options.prepare?.(request);
     const disposers: Array<() => Promise<void>> = [];
     if (prepared?.dispose) disposers.push(prepared.dispose);
     try {
       for (const endpoint of prepared?.endpoints ?? [])
         disposers.push(await this.options.client.registerEndpoint(endpoint));
+      let session: ControllerSession | undefined;
+      disposers.push(
+        await this.options.client.registerEndpoint({
+          id: contextId,
+          context: true,
+          required: true,
+          handle: (call, signal) => {
+            if (!session)
+              throw new ControllerError(
+                "context_unavailable",
+                "Session context is unavailable",
+              );
+            return session.prepareContext(call.operation, call.payload, signal);
+          },
+        }),
+      );
+      if (mcpId)
+        disposers.push(
+          await this.options.client.registerEndpoint({
+            id: mcpId,
+            mcp: true,
+            handle: async (call) => {
+              if (call.operation !== "mcp.resolve")
+                throw new ControllerError(
+                  "invalid_mcp",
+                  "Unsupported MCP operation",
+                );
+              return request.mcpServers as unknown as Json;
+            },
+          }),
+        );
       const thread = id
         ? (await this.options.client.snapshot(id)).thread
         : await this.options.client.createThread({
             ...prepared?.thread,
+            id: threadId,
+            ...(mcpId ? { mcpEndpoint: mcpId } : {}),
+            contextSources: [
+              ...(prepared?.thread?.contextSources ?? []),
+              contextId,
+            ],
             provider: this.options.provider(request),
             workspace: this.options.workspace(request),
             configuration: {
@@ -133,17 +170,19 @@ export class ControllerRuntime implements AgentRuntime {
           });
       if (
         thread.provider !== this.options.provider(request) ||
-        thread.workspace !== this.options.workspace(request)
+        thread.workspace !== this.options.workspace(request) ||
+        thread.mcpEndpoint !== mcpId
       )
         throw new ControllerError(
           "binding_mismatch",
           "Thread belongs to another provider or workspace",
         );
-      const session = new ControllerSession(
-        this.options.client,
-        thread,
-        disposers,
-      );
+      if (!thread.contextSources?.includes(contextId))
+        throw new ControllerError(
+          "binding_mismatch",
+          "Thread lacks the current preparation contract",
+        );
+      session = new ControllerSession(this.options.client, thread, disposers);
       await session.attach();
       return session;
     } catch (error) {
@@ -164,6 +203,7 @@ class ControllerSession implements AgentSession {
   #submission?: Promise<Receipt>;
   #unsubscribe?: () => void;
   #closed = false;
+  readonly #preparations = new Map<string, AgentTurnOptions>();
   constructor(
     readonly client: ControllerClient,
     thread: Thread,
@@ -199,6 +239,7 @@ class ControllerSession implements AgentSession {
       );
     const commandId = crypto.randomUUID();
     this.#activeCommand = commandId;
+    this.#preparations.set(commandId, options ?? {});
     this.#activeTurn = undefined;
     this.#cursor = 0;
     this.#interactions.clear();
@@ -291,7 +332,47 @@ class ControllerSession implements AgentSession {
     await Promise.allSettled(
       this.disposers.reverse().map((dispose) => dispose()),
     );
+    this.#preparations.clear();
     this.#events.close();
+  }
+  async prepareContext(
+    operation: string,
+    payload: Json,
+    signal: AbortSignal,
+  ): Promise<Json> {
+    if (operation === "context.authorize") {
+      const pending = this.#activeCommand
+        ? this.#preparations.get(this.#activeCommand)
+        : undefined;
+      return pending?.authorizeContext
+        ? await pending.authorizeContext(signal)
+        : true;
+    }
+    if (operation !== "context.resolve")
+      throw new ControllerError(
+        "invalid_context",
+        "Unsupported context operation",
+      );
+    const commandId = (payload as { turn?: { commandId?: string } }).turn
+      ?.commandId;
+    const options = commandId ? this.#preparations.get(commandId) : undefined;
+    if (!options)
+      throw new ControllerError(
+        "context_unavailable",
+        "The originating turn context is no longer attached",
+      );
+    const blocks = (await options.prepareContext?.(signal)) ?? [];
+    return blocks.map((block) => ({
+      id: block.id,
+      revision:
+        block.kind === "conversation-handoff"
+          ? block.metadata.throughEntryHash
+          : String(block.metadata.revision),
+      kind: block.kind === "conversation-handoff" ? "handoff" : "memory",
+      trust: "reference",
+      required: block.kind === "conversation-handoff",
+      content: block.content,
+    }));
   }
   private observe(snapshot: Snapshot): void {
     if (this.#closed) return;
@@ -352,6 +433,7 @@ class ControllerSession implements AgentSession {
       }
     if (isTerminal(active.state) && !this.#terminal.has(active.id)) {
       this.#terminal.add(active.id);
+      this.#preparations.delete(active.commandId);
       this.#events.push(
         active.state === "completed"
           ? { type: "completed" }

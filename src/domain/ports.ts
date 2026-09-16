@@ -1,3 +1,4 @@
+import type { McpServerContribution } from "../execution/compat/types.js";
 import type {
   Capabilities,
   ContextBlock,
@@ -22,6 +23,7 @@ export type RuntimeEvent =
   | { type: "completed"; outcome?: "completed" | "cancelled" }
   | { type: "failed"; code: string };
 export interface ExecutionContext {
+  mcpServers?: McpServerContribution[];
   thread: Thread;
   turn: Turn;
   preparation: Preparation;
@@ -91,4 +93,11 @@ export interface MemoryEndpoint {
     input: Json,
     signal: AbortSignal,
   ): Promise<Json>;
+}
+
+export interface McpEndpoint {
+  resolve(
+    thread: Thread,
+    signal: AbortSignal,
+  ): Promise<McpServerContribution[]>;
 }

@@ -28,6 +28,7 @@ export class CodexProvider implements ExecutionProvider {
     },
     input: true,
     tools: true,
+    externalMcp: true,
   };
   readonly #executor: AgentRuntimeExecutor;
   readonly #sink: AgentHostSink;
@@ -91,6 +92,7 @@ export class CodexProvider implements ExecutionProvider {
     let state = this.#sessions.get(thread.id);
     const manifest = JSON.stringify({
       tools: context.tools,
+      mcpServers: context.mcpServers ?? [],
       restricted: preparation.configuration.restricted ?? false,
     });
     if (state && state.manifest !== manifest) {
@@ -120,6 +122,7 @@ export class CodexProvider implements ExecutionProvider {
         prompt: "",
         workspace,
         restricted: configuration.restricted,
+        mcpServers: context.mcpServers,
         model: configuration.model
           ? { provider: "codex", model: configuration.model }
           : undefined,

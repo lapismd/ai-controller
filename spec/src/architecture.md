@@ -75,3 +75,17 @@ application tools and configure the provider's restricted execution mode.
 
 Runtime facades recognize the stored `payloadUnavailable` event marker and
 emit an explicit status gap rather than dropping missing private activity.
+
+The browser runtime accepts a deferred per-turn context port. The SDK registers
+that port before submission and the service invokes it only when queued work is
+eligible. Port callbacks are volatile capabilities, never serialized into thread
+configuration. Resume uses the same endpoint identity and refuses mismatched
+scope bindings. Compatibility handoff projection and canonical transcript hashes
+are shared library functions; source transcripts remain application-owned.
+
+External MCP launch descriptions travel through an owner-scoped volatile endpoint.
+The controller validates them before dispatch and rejects them for restricted
+execution or providers without MCP support. Only the endpoint identity persists;
+launch environment values are excluded from receipts, preparations, journals and
+CLI diagnostics. A disconnected endpoint fails closed. MCP provider activity is
+observational and never re-invokes an application tool handler.
