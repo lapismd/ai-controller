@@ -4,6 +4,7 @@ import {
   type AgentRuntimeExecutor,
   type NativeAgentRuntimeEvent,
   type ToolBridgeCall,
+  type AcpAgentRegistry,
 } from "@lapismd/ai-host";
 import { ControllerError, type Capabilities, type Json } from "../contracts.js";
 import type { ExecutionContext, ExecutionProvider } from "../domain/ports.js";
@@ -47,12 +48,14 @@ export class AcpProvider implements ExecutionProvider {
       agent: string;
       workspaces: Record<string, string>;
       executor?: AgentRuntimeExecutor;
+      agentRegistry?: AcpAgentRegistry;
       shimCommand?: { command: string; args: string[] };
     },
   ) {
     this.#executor =
       options.executor ??
       createAgentRuntimeExecutor({
+        agentRegistry: options.agentRegistry,
         toolBridgeOptions: options.shimCommand
           ? { shimCommand: options.shimCommand }
           : undefined,
@@ -88,7 +91,10 @@ export class AcpProvider implements ExecutionProvider {
         "Select a configured provider instance for this agent",
       );
     let session = this.#sessions.get(thread.id);
-    const manifest = JSON.stringify(context.tools);
+    const manifest = JSON.stringify({
+      tools: context.tools,
+      restricted: preparation.configuration.restricted ?? false,
+    });
     if (session && session.manifest !== manifest) {
       await this.#executor.closeAcpSession(session.sessionId);
       this.#sessions.delete(thread.id);
@@ -122,6 +128,7 @@ export class AcpProvider implements ExecutionProvider {
           sessionId: session.sessionId,
           agent: this.options.agent,
           workspace,
+          restricted: preparation.configuration.restricted,
           ...(session.bridgeId ? { appToolBridgeId: session.bridgeId } : {}),
         });
         session.sessionId = result.sessionId;

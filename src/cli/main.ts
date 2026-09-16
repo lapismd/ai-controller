@@ -1,13 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { ControllerClient } from "../client.js";
 import { ControllerError } from "../contracts.js";
-import { ControllerStore } from "../persistence/store.js";
-import { Controller } from "../domain/engine.js";
-import { AcpProvider } from "../execution/acp.js";
-import { CodexProvider } from "../execution/codex.js";
-import type { ExecutionProvider } from "../domain/ports.js";
-import { serveController } from "../transport/server.js";
-import { currentSelfInvocation } from "./self.js";
+import { startService } from "../service.js";
 import {
   defaultConfigPath,
   initialize,
@@ -281,55 +275,25 @@ async function runService(
   config: ServiceConfig,
   log: (event: string, data: unknown) => void,
 ): Promise<void> {
-  const self = currentSelfInvocation();
-  const shimCommand = {
-    command: self.command,
-    args: [...self.argsPrefix, "__internal", "mcp-shim"],
-  };
-  const providers = new Map<string, ExecutionProvider>(
-    config.providers.map((provider) => [
-      provider.id,
-      provider.driver === "acp"
-        ? new AcpProvider({
-            id: provider.id,
-            agent: provider.agent,
-            workspaces: config.workspaces,
-            shimCommand,
-          })
-        : new CodexProvider(config.workspaces, {
-            id: provider.id,
-            shimCommand,
-          }),
-    ]),
+  const credentials = await Promise.all(
+    config.credentials.map(async (credential) => ({
+      token: await readToken(credential.tokenFile),
+      principal: credential.principal,
+    })),
   );
-  const store = new ControllerStore(config.database);
-  const controller = new Controller(store, providers);
-  let server: Awaited<ReturnType<typeof serveController>> | undefined;
+  const running = await startService(config, credentials);
   try {
-    const credentials = await Promise.all(
-      config.credentials.map(async (credential) => ({
-        token: await readToken(credential.tokenFile),
-        principal: credential.principal,
-      })),
-    );
-    controller.start();
-    server = await serveController(controller, {
-      credentials,
-      bind: config.bind,
-      port: config.port,
-    });
     log("ready", {
-      url: server.url,
+      url: running.url,
       providers: config.providers.map((item) => item.id),
     });
     await stopped();
   } finally {
-    await server?.close();
-    await controller.close();
-    store.close();
+    await running.close();
     log("stopped", {});
   }
 }
+
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

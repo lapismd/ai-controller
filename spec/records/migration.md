@@ -123,3 +123,30 @@ The Nostr memory extraction additionally passes the disposable relay-stack test:
 13 plugins, hydration, roles, managed-agent restart reconnect, persistence and
 Keytr reset/verification. This test uses the locally compiled controller adapter;
 it does not establish completion of the execution migration.
+
+## Managed service boundary checkpoint
+
+The shared package now exports a managed-process client that launches the
+separate executable. Credentials use stdin, startup/shutdown are bounded, and
+both managed and operator modes share service composition. Provider registries
+preserve external executable argv; restricted sessions reject application tools.
+Remote endpoint cancellation now reaches application handlers, and an unconfirmed
+tool result remains unknown without redispatch. Journal subscriptions deliver
+ordered pages and retry failed domain projection commits at the same event.
+
+The host declaration regression was reproduced with three unused negative type
+assertions in a NodeNext consumer. The owner build now normalizes relative ESM
+declaration imports. The exact regression passes and all 110 host tests pass.
+This is an upstream declaration correction, not a consumer type shim.
+
+The Lapis memory facade removes 2,900 lines of duplicate implementation. Its final
+memory suite (32), package suite (360), type checks, build/publint/npm-pack,
+specification/App ownership checks and fresh AI Storybook lane (53) pass. The
+archive validates and reproduces byte for byte; all 12 archive/signature fixture
+tests pass. No production signing or publication was performed.
+
+The managed-service slice passes 44 tests plus type/browser-boundary checks,
+specification validation, Deno compilation, CLI restart smoke and publint.
+No running application has switched to the service yet. The journal path has
+its own 1,010-event replay/fault fixture, and remote tool cancellation has an
+end-to-end endpoint fixture. Integration deployment is still pending.

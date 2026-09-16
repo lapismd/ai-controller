@@ -64,3 +64,11 @@ memory twice. ACP thought output is normalized to reasoning activity, separate
 from authored replies. Snapshots include a bounded activity tail and explicitly
 report truncation; complete retained history remains available through replay.
 Thread configuration uses optimistic versions and rejects changes during work.
+
+Managed application integrations launch the separate controller executable through
+an exported process client. Startup credentials travel over the child's private
+stdin, never argv. The caller supplies an allowlisted environment and a stable
+database path. The child reads generic provider definitions, reports readiness
+without credentials, and shares the same service/core as `serve`. Nostr signing
+and vault credentials remain outside this interface. Restricted sessions reject
+application tools and configure the provider's restricted execution mode.

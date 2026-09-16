@@ -140,94 +140,136 @@ export async function serveController(
               endpointId,
               connectionId,
               (request) => send({ type: "endpoint.request", request }),
+              (id) => send({ type: "endpoint.cancel", id }),
             );
             const disposers = [unregister];
-            const call = (operation: string, payload: Json) =>
-              endpoints.request(owner, endpointId, operation, payload);
-            if (input.memory)
-              disposers.push(
-                controller.registerMemory(owner, endpointId, {
-                  profile: (input.memory as { profile: MemoryProfile }).profile,
-                  candidates: async (thread, query) => {
-                    const value = await call("memory.candidates", {
-                      thread: thread as unknown as Json,
-                      query,
-                    });
-                    if (
-                      !Array.isArray(value) ||
-                      value.length > 40 ||
-                      value.some((item) => !validCandidate(item))
-                    )
-                      throw new ControllerError(
-                        "invalid_memory",
-                        "Memory candidate response is invalid",
-                      );
-                    return value as unknown as MemoryCandidate[];
-                  },
-                  authorize: async (thread, refs) =>
-                    (await call("memory.authorize", {
-                      thread: thread as unknown as Json,
-                      refs: refs as unknown as Json,
-                    })) === true,
-                  read: (thread, operation, input) =>
-                    call(`memory.${operation}`, {
-                      thread: thread as unknown as Json,
-                      input,
-                    }),
-                }),
+            const call = (
+              operation: string,
+              payload: Json,
+              signal?: AbortSignal,
+            ) =>
+              endpoints.request(
+                owner,
+                endpointId,
+                operation,
+                payload,
+                operation === "tool.execute" ? 120_000 : 5000,
+                signal,
               );
-            if (input.context)
-              disposers.push(
-                controller.registerContext(owner, endpointId, {
-                  required: input.required === true,
-                  resolve: async (thread, turn) => {
-                    const value = await call("context.resolve", {
-                      thread: thread as unknown as Json,
-                      turn: turn as unknown as Json,
-                    });
-                    if (
-                      !Array.isArray(value) ||
-                      value.some((block) => !validContext(block))
-                    )
-                      throw new ControllerError(
-                        "invalid_context",
-                        "Context response is invalid",
+            try {
+              if (input.memory)
+                disposers.push(
+                  controller.registerMemory(owner, endpointId, {
+                    profile: (input.memory as { profile: MemoryProfile })
+                      .profile,
+                    candidates: async (thread, query, signal) => {
+                      const value = await call(
+                        "memory.candidates",
+                        {
+                          thread: thread as unknown as Json,
+                          query,
+                        },
+                        signal,
                       );
-                    return value as unknown as ContextBlock[];
-                  },
-                  authorize: async (thread, blocks) =>
-                    (await call("context.authorize", {
-                      thread: thread as unknown as Json,
-                      blocks: blocks as unknown as Json,
-                    })) === true,
-                }),
-              );
-            if (input.tools)
-              disposers.push(
-                controller.registerTools(owner, endpointId, {
-                  definitions: input.tools as ToolDefinition[],
-                  execute: async (name, args, context) => {
-                    const result = await call("tool.execute", {
-                      name,
-                      arguments: args,
-                      invocationId: context.invocationId,
-                      thread: context.thread as unknown as Json,
-                      turn: context.turn as unknown as Json,
-                    });
-                    if (
-                      !result ||
-                      typeof result !== "object" ||
-                      Array.isArray(result) ||
-                      !("content" in result)
-                    )
-                      throw new ControllerError(
-                        "invalid_tool_result",
-                        "Tool response is invalid",
+                      if (
+                        !Array.isArray(value) ||
+                        value.length > 40 ||
+                        value.some((item) => !validCandidate(item))
+                      )
+                        throw new ControllerError(
+                          "invalid_memory",
+                          "Memory candidate response is invalid",
+                        );
+                      return value as unknown as MemoryCandidate[];
+                    },
+                    authorize: async (thread, refs, signal) =>
+                      (await call(
+                        "memory.authorize",
+                        {
+                          thread: thread as unknown as Json,
+                          refs: refs as unknown as Json,
+                        },
+                        signal,
+                      )) === true,
+                    read: (thread, operation, input, signal) =>
+                      call(
+                        `memory.${operation}`,
+                        {
+                          thread: thread as unknown as Json,
+                          input,
+                        },
+                        signal,
+                      ),
+                  }),
+                );
+              if (input.context)
+                disposers.push(
+                  controller.registerContext(owner, endpointId, {
+                    required: input.required === true,
+                    resolve: async (thread, turn, signal) => {
+                      const value = await call(
+                        "context.resolve",
+                        {
+                          thread: thread as unknown as Json,
+                          turn: turn as unknown as Json,
+                        },
+                        signal,
                       );
-                    return result as unknown as ToolResult;
-                  },
-                }),
-              );
+                      if (
+                        !Array.isArray(value) ||
+                        value.some((block) => !validContext(block))
+                      )
+                        throw new ControllerError(
+                          "invalid_context",
+                          "Context response is invalid",
+                        );
+                      return value as unknown as ContextBlock[];
+                    },
+                    authorize: async (thread, blocks, signal) =>
+                      (await call(
+                        "context.authorize",
+                        {
+                          thread: thread as unknown as Json,
+                          blocks: blocks as unknown as Json,
+                        },
+                        signal,
+                      )) === true,
+                  }),
+                );
+              if (input.tools)
+                disposers.push(
+                  controller.registerTools(owner, endpointId, {
+                    definitions: input.tools as ToolDefinition[],
+                    execute: async (name, args, context) => {
+                      const result = await call(
+                        "tool.execute",
+                        {
+                          name,
+                          arguments: args,
+                          invocationId: context.invocationId,
+                          thread: context.thread as unknown as Json,
+                          turn: context.turn as unknown as Json,
+                        },
+                        context.signal,
+                      );
+                      if (
+                        !result ||
+                        typeof result !== "object" ||
+                        Array.isArray(result) ||
+                        !("content" in result)
+                      )
+                        throw new ControllerError(
+                          "invalid_tool_result",
+                          "Tool response is invalid",
+                        );
+                      return result as unknown as ToolResult;
+                    },
+                  }),
+                );
+            } catch (error) {
+              disposers.reverse().forEach((dispose) => dispose());
+              throw error;
+            }
             registrations.set(endpointId, () =>
               disposers.forEach((dispose) => dispose()),
             );

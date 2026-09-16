@@ -261,3 +261,123 @@ describe("shared remote client", () => {
     }
   });
 });
+it("cancels a remote tool handler and retains its unknown outcome without redispatch", async () => {
+  const store = new ControllerStore(":memory:");
+  let invoked = 0;
+  let aborted = false;
+  const controller = new Controller(
+    store,
+    new Map([
+      [
+        "fake",
+        {
+          capabilities: {
+            driver: "fake",
+            content: ["text" as const],
+            configuration: false,
+            resume: "none" as const,
+            approvals: false,
+            input: false,
+            tools: true,
+          },
+          close: async () => {},
+          execute: async (c) => {
+            await c.emit({
+              type: "activity",
+              data: { type: "status", status: "working" },
+            });
+            await c.callTool("write", {}, "one-effect");
+            await c.emit({ type: "completed" });
+          },
+        },
+      ],
+    ]),
+  );
+  const server = await serveController(controller, {
+    credentials: [
+      {
+        token,
+        principal: { id: "owner", providers: ["fake"], workspaces: ["root"] },
+      },
+    ],
+  });
+  const client = new ControllerClient({ url: server.url, token });
+  try {
+    await client.registerEndpoint({
+      id: "app",
+      tools: [
+        {
+          name: "write",
+          description: "Write",
+          inputSchema: { type: "object" },
+          effect: "write",
+        },
+      ],
+      handle: async (_request, signal) => {
+        invoked++;
+        await new Promise<void>((resolve) =>
+          signal.addEventListener(
+            "abort",
+            () => {
+              aborted = true;
+              resolve();
+            },
+            { once: true },
+          ),
+        );
+        return { content: "late" };
+      },
+    });
+    const thread = await client.createThread({
+      provider: "fake",
+      workspace: "root",
+      toolEndpoint: "app",
+    });
+    const receipt = await client.submit({
+      threadId: thread.id,
+      commandId: "cancel",
+      text: "write",
+    });
+    await expect.poll(() => invoked).toBe(1);
+    await client.cancel(receipt.turnId);
+    await expect.poll(() => aborted).toBe(true);
+    await controller.drain();
+    expect(store.interactions(thread.id)[0]?.state).toBe("unknown");
+    await client.submit({
+      threadId: thread.id,
+      commandId: "cancel",
+      text: "write",
+    });
+    expect(invoked).toBe(1);
+  } finally {
+    client.dispose();
+    await server.close();
+    await controller.close();
+    store.close();
+  }
+});
+it("replays journal pages before live output and retries a failed domain commit at the same event", async () => {
+  const store = new ControllerStore(":memory:");
+  const controller = new Controller(store, new Map());
+  const server = await serveController(controller, { credentials: [{ token, principal: { id: "owner", providers: ["fake"], workspaces: ["root"] } }] });
+  const client = new ControllerClient({ url: server.url, token });
+  try {
+    const thread = await client.createThread({ provider: "fake", workspace: "root" });
+    for (let index = 0; index < 1010; index++) store.append(thread.id, "test", { index });
+    const delivered: number[] = [];
+    let fail = true;
+    let failures = 0;
+    const unsubscribe = await client.subscribeJournal(thread.id, { onError() { failures++; } }, event => {
+      if (event.type !== "test") return;
+      const index = (event.data as { index: number }).index;
+      if (index === 500 && fail) { fail = false; throw new Error("Domain commit failed"); }
+      delivered.push(index);
+    });
+    await expect.poll(() => delivered.length, { timeout: 4000 }).toBe(1010);
+    expect(failures).toBe(1);
+    expect(delivered).toEqual(Array.from({ length: 1010 }, (_, index) => index));
+    store.append(thread.id, "test", { index: 1010 });
+    await expect.poll(() => delivered.at(-1)).toBe(1010);
+    unsubscribe();
+  } finally { client.dispose(); await server.close(); await controller.close(); store.close(); }
+});

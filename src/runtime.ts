@@ -36,9 +36,7 @@ export interface ControllerRuntimeOptions {
   provider(request: Omit<AgentRequest, "prompt">): string;
   workspace(request: Omit<AgentRequest, "prompt">): string;
   /** Supplies authorized domain endpoints and immutable scope bindings. */
-  prepare?(
-    request: Omit<AgentRequest, "prompt">,
-  ): Promise<{
+  prepare?(request: Omit<AgentRequest, "prompt">): Promise<{
     thread?: Pick<
       ThreadInput,
       | "externalRef"
@@ -128,6 +126,7 @@ export class ControllerRuntime implements AgentRuntime {
             provider: this.options.provider(request),
             workspace: this.options.workspace(request),
             configuration: {
+              ...(request.restricted ? { restricted: true } : {}),
               ...(request.model ? { model: request.model.model } : {}),
               ...(request.thinking ? { thinking: request.thinking } : {}),
             },

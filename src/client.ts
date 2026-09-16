@@ -19,7 +19,7 @@ export interface EndpointRegistration {
   required?: boolean;
   tools?: ToolDefinition[];
   memory?: { profile: "lapis-v1" | "nostr-v1" };
-  handle(request: EndpointRequest): Promise<Json>;
+  handle(request: EndpointRequest, signal: AbortSignal): Promise<Json>;
 }
 type Subscription = {
   snapshot?: Snapshot;
@@ -44,6 +44,7 @@ export class ControllerClient {
   >();
   readonly #subscriptions = new Map<string, Subscription>();
   readonly #endpoints = new Map<string, EndpointRegistration>();
+  readonly #handlers = new Map<string, AbortController>();
   constructor(
     readonly options: {
       url: string;
@@ -108,6 +109,69 @@ export class ControllerClient {
         await this.send("endpoints.unregister", { id: registration.id });
     };
   }
+  /** Ordered durable delivery for applications that commit their own domain projection.
+   * Failed observers retry the same event; commands are never resubmitted.
+   */
+  async subscribeJournal(
+    threadId: string,
+    options: {
+      after?: string;
+      afterSequence?: number;
+      onError?(error: unknown): void;
+    },
+    listener: (event: ControllerEvent) => void | Promise<void>,
+  ): Promise<() => void> {
+    let cursor = options.after;
+    let target: string | undefined;
+    let stopped = false;
+    let pumping = false;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const pump = () => {
+      if (pumping || stopped || retry || !target) return;
+      pumping = true;
+      void (async () => {
+        cursor ??= `${target!.split(":")[0]}:${options.afterSequence ?? 0}`;
+        while (!stopped && cursorAfter(target!, cursor!)) {
+          const barrier = target!;
+          const page: ControllerEvent[] = await this.request<ControllerEvent[]>(
+            "events.read",
+            { threadId, after: cursor, limit: 1000 },
+          );
+          for (const event of page) {
+            if (stopped || cursorAfter(event.cursor, barrier)) break;
+            if (!cursorAfter(event.cursor, cursor!)) continue;
+            await listener(event);
+            cursor = event.cursor;
+          }
+          if (
+            !page.length ||
+            (page.length < 1000 && !cursorAfter(page.at(-1)!.cursor, barrier))
+          )
+            cursor = barrier;
+        }
+      })()
+        .catch((error) => {
+          options.onError?.(error);
+          if (!stopped)
+            retry = setTimeout(() => {
+              retry = undefined;
+              pump();
+            }, 1000);
+        })
+        .finally(() => {
+          pumping = false;
+        });
+    };
+    const unsubscribe = await this.subscribe(threadId, (snapshot) => {
+      target = snapshot.cursor;
+      pump();
+    });
+    return () => {
+      stopped = true;
+      if (retry) clearTimeout(retry);
+      unsubscribe();
+    };
+  }
   async subscribe(
     threadId: string,
     listener: (snapshot: Snapshot, event?: ControllerEvent) => void,
@@ -140,6 +204,8 @@ export class ControllerClient {
     this.failPending();
     this.#subscriptions.clear();
     this.#endpoints.clear();
+    for (const handler of this.#handlers.values()) handler.abort();
+    this.#handlers.clear();
     this.options.onState?.("closed");
   }
   private async open(): Promise<void> {
@@ -159,6 +225,8 @@ export class ControllerClient {
     socket.addEventListener("close", (event) => {
       if (this.#socket !== socket) return;
       this.#socket = undefined;
+      for (const handler of this.#handlers.values()) handler.abort();
+      this.#handlers.clear();
       this.failPending();
       if (!this.#disposed) {
         this.options.onState?.("offline");
@@ -250,7 +318,10 @@ export class ControllerClient {
       socket.close(4400, "invalid_frame");
       return;
     }
-    if (typeof frame.id === "string") {
+    if (frame.type === "endpoint.cancel" && typeof frame.id === "string") {
+      this.#handlers.get(frame.id)?.abort();
+      this.#handlers.delete(frame.id);
+    } else if (typeof frame.id === "string") {
       const pending = this.#pending.get(frame.id);
       if (!pending) return;
       clearTimeout(pending.timer);
@@ -297,18 +368,25 @@ export class ControllerClient {
         return;
       }
       const endpoint = this.#endpoints.get(request.endpoint);
+      const abort = new AbortController();
+      this.#handlers.set(request.id, abort);
       void (async () => {
         let result: Json = null;
         let failed = false;
         try {
           if (!endpoint || request.deadline <= Date.now())
             throw new Error("Endpoint unavailable");
-          result = await endpoint.handle(request);
+          result = await endpoint.handle(request, abort.signal);
         } catch {
           failed = true;
         }
+        this.#handlers.delete(request.id);
         // A result never reconnects or migrates to another connection generation.
-        if (this.#socket === socket && socket.readyState === 1)
+        if (
+          !abort.signal.aborted &&
+          this.#socket === socket &&
+          socket.readyState === 1
+        )
           await this.send("endpoints.respond", {
             id: request.id,
             result,

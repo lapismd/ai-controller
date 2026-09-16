@@ -322,6 +322,14 @@ export class Controller {
         );
       const memoryTools = thread.memoryEndpoint ? memoryToolDefinitions : [];
       if (
+        preparation.configuration.restricted &&
+        ((endpoint?.definitions.length ?? 0) || memoryTools.length)
+      )
+        throw new ControllerError(
+          "restricted_tools",
+          "Restricted execution cannot receive application or memory tools",
+        );
+      if (
         endpoint?.definitions.some((tool) =>
           memoryTools.some((memory) => memory.name === tool.name),
         )

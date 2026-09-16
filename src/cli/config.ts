@@ -8,6 +8,7 @@ export interface ServiceConfig {
   bind: "127.0.0.1" | "::1";
   port: number;
   database: string;
+  agentConfig?: string;
   workspaces: Record<string, string>;
   providers: Array<{
     id: string;
@@ -25,6 +26,9 @@ export function defaultConfigPath(): string {
 }
 export async function readConfig(path: string): Promise<ServiceConfig> {
   const content: unknown = JSON.parse(await readFile(path, "utf8"));
+  return validateConfig(content);
+}
+export function validateConfig(content: unknown): ServiceConfig {
   if (!content || typeof content !== "object")
     throw new ControllerError(
       "configuration_invalid",
@@ -37,7 +41,11 @@ export async function readConfig(path: string): Promise<ServiceConfig> {
     !Number.isInteger(config.port) ||
     config.port < 1 ||
     config.port > 65535 ||
+    typeof config.database !== "string" ||
     !isAbsolute(config.database) ||
+    (config.agentConfig !== undefined &&
+      (typeof config.agentConfig !== "string" ||
+        !isAbsolute(config.agentConfig))) ||
     !config.workspaces ||
     !Object.keys(config.workspaces).length ||
     Object.values(config.workspaces).some(

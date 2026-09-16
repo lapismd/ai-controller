@@ -89,7 +89,10 @@ export class CodexProvider implements ExecutionProvider {
         "Thinking configuration is unsupported",
       );
     let state = this.#sessions.get(thread.id);
-    const manifest = JSON.stringify(context.tools);
+    const manifest = JSON.stringify({
+      tools: context.tools,
+      restricted: preparation.configuration.restricted ?? false,
+    });
     if (state && state.manifest !== manifest) {
       await state.session.close();
       await state.pump;
@@ -116,6 +119,7 @@ export class CodexProvider implements ExecutionProvider {
       const request = {
         prompt: "",
         workspace,
+        restricted: configuration.restricted,
         model: configuration.model
           ? { provider: "codex", model: configuration.model }
           : undefined,

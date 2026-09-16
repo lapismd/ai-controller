@@ -6,6 +6,7 @@ const object = (
   required: string[] = [],
 ) => ({ type: "object", additionalProperties: false, properties, required });
 const config = object({
+  restricted: { type: "boolean" },
   model: string,
   agent: string,
   thinking: string,
