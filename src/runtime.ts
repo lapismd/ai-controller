@@ -378,7 +378,7 @@ class ControllerSession implements AgentSession {
       !data ||
       typeof data !== "object" ||
       Array.isArray(data) ||
-      "unavailable" in data
+      "payloadUnavailable" in data
     ) {
       this.#events.push({
         type: "status",

@@ -218,3 +218,33 @@ it("requires a current configuration version and rejects configuration during ac
     await f.close();
   }
 });
+
+it("renders the stored private-payload marker as an explicit transcript gap", async () => {
+  const f = await fixture(async (c) => {
+    // This is the wire payload emitted by ControllerStore after volatile data is lost.
+    await c.emit({ type: "activity", data: { payloadUnavailable: true } });
+    await c.emit({ type: "completed" });
+  });
+  const session = await f.runtime.start({ prompt: "" });
+  const events: AgentEvent[] = [];
+  const pump = (async () => {
+    for await (const event of session.events()) events.push(event);
+  })();
+  try {
+    await session.send("request");
+    await expect
+      .poll(() => events.some((event) => event.type === "completed"))
+      .toBe(true);
+    expect(
+      events.some(
+        (event) =>
+          event.type === "status" &&
+          event.status === "Private transcript payload is unavailable",
+      ),
+    ).toBe(true);
+  } finally {
+    await session.close();
+    await pump;
+    await f.close();
+  }
+});

@@ -72,3 +72,6 @@ database path. The child reads generic provider definitions, reports readiness
 without credentials, and shares the same service/core as `serve`. Nostr signing
 and vault credentials remain outside this interface. Restricted sessions reject
 application tools and configure the provider's restricted execution mode.
+
+Runtime facades recognize the stored `payloadUnavailable` event marker and
+emit an explicit status gap rather than dropping missing private activity.
