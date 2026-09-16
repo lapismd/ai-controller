@@ -3,6 +3,7 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { ControllerError, type Principal } from "../contracts.js";
+import { DEFAULT_SCOPES, isControllerScope } from "../auth/scopes.js";
 export interface ServiceConfig {
   schema: "lapis-ai-controller.config/1";
   bind: "127.0.0.1" | "::1";
@@ -88,7 +89,13 @@ export function validateConfig(content: unknown): ServiceConfig {
       !Array.isArray(principal.providers) ||
       principal.providers.some((id) => !ids.has(id)) ||
       !Array.isArray(principal.workspaces) ||
-      principal.workspaces.some((id) => !Object.hasOwn(config.workspaces, id))
+      principal.workspaces.some((id) => !Object.hasOwn(config.workspaces, id)) ||
+      (principal.applicationId !== undefined &&
+        !/^[a-zA-Z0-9._-]{1,128}$/.test(principal.applicationId)) ||
+      (principal.scopes !== undefined &&
+        (!Array.isArray(principal.scopes) ||
+          !principal.scopes.length ||
+          principal.scopes.some((scope) => !isControllerScope(scope))))
     )
       throw new ControllerError(
         "configuration_invalid",
@@ -144,8 +151,10 @@ export async function initialize(
         tokenFile,
         principal: {
           id: "local",
+          applicationId: "local",
           providers: ["codex", "cursor", "codex-native"],
           workspaces: ["default"],
+          scopes: [...DEFAULT_SCOPES],
         },
       },
     ],

@@ -34,6 +34,8 @@ Endpoint disposal revokes tools, context and memory registrations immediately.
 | AIC-MEM-003  | Maintenance MUST use durable operation identities. Forget exclusions MUST survive rebuilding, and derived replay MUST NOT cause duplicate learning or rewrite source evidence.                                               |
 | AIC-API-001  | Every API operation MUST authorize its principal and object scope. The shared client MUST own reconnect and atomic snapshot/event application without resubmitting mutations.                                                |
 | AIC-API-002  | Wire and stored schemas MUST be versioned and validated. Unsupported versions MUST fail explicitly and slow subscribers MUST have bounded buffers.                                                                           |
+| AIC-API-003  | WebSocket hello MUST bind or resume a revocable AuthSession. Every later operation MUST authorize through a complete method-to-scope map, then resource ownership. A bootstrap token MUST NOT grant operations without that session. Handshake MUST NOT add authority, and requested scopes MUST NOT widen the credential grant. |
+| AIC-API-004  | Memory and application-tool access MUST use server-derived principal, application and workspace identity. Client-supplied identity, scope or partition fields MUST NOT broaden access. Endpoint registrations MUST be isolated by principal and application. Replay MUST use the same thread authorization as ordinary reads. |
 | AIC-CLI-001  | The Deno executable MUST expose typed service, execution, interaction, context and memory commands with generated help, human output, versioned JSON/NDJSON and stable exit classes. Secrets MUST NOT appear in diagnostics. |
 | AIC-CLI-002  | `pnpm local:controller` MUST build the current checkout, atomically install `lapis-ai-controller` at `~/.local/bin/lapis-ai-controller` by default, initialize missing default configuration with `--workspace` or `~/.lapis/ai-controller`, reload the user service, and wait until `status` reports protocol `lapis-ai-controller/1`. It MUST NOT print tokens or private payloads. |
 | AIC-PKG-001  | Browser SDK exports MUST exclude server and consumer dependencies. Published dependencies MUST use registry semver ranges.                                                                                                   |
@@ -142,9 +144,46 @@ errors. Metadata-only preparation markers have their own retained schema.
 Metadata-only turns persist only short error codes, never exception text.
 
 A handshake with an unsupported protocol version fails as `protocol_unsupported`
-before token comparison. Two configured identities for one physical workspace
-fail as `workspace_alias`. Restricted-mode, endpoint and retention mismatches
-fail reattachment as `binding_mismatch`.
+before token comparison. Hello then binds a revocable AuthSession from a
+bootstrap credential or session bearer. Handshake success grants no extra
+authority: every later method has a declared scope, then principal, application,
+provider and workspace checks. Missing configuration scopes default to the full
+initial set. Existing file and managed tokens remain bootstrap credentials.
+Replay and subscriptions are `threads:read`. Mutations stay explicit and
+idempotent on command identity. Application tools and memory ports are keyed by
+principal and application. Memory adapters receive a server `access` envelope;
+client identity fields are stripped. `ai-host` stays an in-process executor and
+MUST NOT receive controller-user scopes. A later host service would use a
+controller-owned credential, not an application session. WebSocket tickets remain
+an unissued seam so long-lived secrets can stay out of socket URLs later.
+
+Two configured identities for one physical workspace fail as `workspace_alias`.
+Restricted-mode, endpoint and retention mismatches fail reattachment as
+`binding_mismatch`.
+
+### AIC-API-003 acceptance details
+
+Session authorization verifies:
+
+- Hello with a bootstrap token issues or resumes one AuthSession per credential
+  and may return a session bearer only when newly issued.
+- Hello with a revoked or expired session bearer fails closed.
+- A method without a scope-map entry fails in tests; a session missing a
+  required scope fails as `forbidden`.
+- Reconnect keeps the same AuthSession identity and does not resubmit
+  mutations.
+
+### AIC-API-004 acceptance details
+
+Resource isolation verifies:
+
+- Thread `application` is stamped from the session and defaults to `owner` for
+  retained rows.
+- Another principal or application cannot read the thread, its replay, or its
+  private memory.
+- Memory `input` cannot override server-derived access fields.
+- Application tools cannot be invoked from an unauthorized thread or
+  application.
 
 CLI `CliError` codes keep their exit class. Service-manager unavailability uses
 exit 3; usage and request failures use exit 2. Secrets still require an explicit

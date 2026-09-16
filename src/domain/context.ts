@@ -6,6 +6,7 @@ import {
   type Turn,
 } from "../contracts.js";
 import type { ContextSource } from "./ports.js";
+import { threadEndpointKey } from "../auth/authorize.js";
 
 export async function prepareTurn(
   thread: Thread,
@@ -16,7 +17,7 @@ export async function prepareTurn(
   const blocks: ContextBlock[] = [];
   const omitted: string[] = [];
   for (const id of sourceIds(thread)) {
-    const source = sources.get(`${thread.owner}:${id}`);
+    const source = sources.get(threadEndpointKey(thread, id));
     if (!source) {
       if (id === memorySourceId(thread)) {
         omitted.push(`${id}:unavailable`);
@@ -87,7 +88,7 @@ export async function authorizePreparation(
       )
     )
       continue;
-    const source = sources.get(`${thread.owner}:${id}`);
+    const source = sources.get(threadEndpointKey(thread, id));
     if (
       !source ||
       !(await bounded(source.authorize(thread, blocks, signal), 5000, signal))

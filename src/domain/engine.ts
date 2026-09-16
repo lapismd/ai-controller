@@ -23,18 +23,24 @@ import type {
   McpEndpoint,
 } from "./ports.js";
 import { recallMemory } from "../memory/recall.js";
+import {
+  applicationOf,
+  authorizeMemoryInput,
+  endpointKey,
+  threadEndpointKey,
+} from "../auth/authorize.js";
 
 export class Controller {
   inspectTools(owner: string, threadId: string) {
     const thread = this.store.authorizeThread(owner, threadId);
     const endpoint = thread.toolEndpoint
-      ? this.#tools.get(`${owner}:${thread.toolEndpoint}`)
+      ? this.#tools.get(threadEndpointKey(thread, thread.toolEndpoint))
       : undefined;
     return {
       available: !thread.toolEndpoint || !!endpoint,
       memoryAvailable:
         !thread.memoryEndpoint ||
-        this.#memory.has(`${owner}:${thread.memoryEndpoint}`),
+        this.#memory.has(threadEndpointKey(thread, thread.memoryEndpoint)),
       definitions: structuredClone([
         ...(endpoint?.definitions ?? []),
         ...(thread.memoryEndpoint ? memoryToolDefinitions : []),
@@ -65,8 +71,13 @@ export class Controller {
     this.store.recover();
     this.schedule();
   }
-  registerMcp(owner: string, id: string, endpoint: McpEndpoint): () => void {
-    const key = `${owner}:${id}`;
+  registerMcp(
+    owner: string,
+    id: string,
+    endpoint: McpEndpoint,
+    applicationId = owner,
+  ): () => void {
+    const key = endpointKey(owner, applicationId, id);
     this.#mcp.set(key, endpoint);
     return () => {
       if (this.#mcp.get(key) === endpoint) this.#mcp.delete(key);
@@ -76,10 +87,14 @@ export class Controller {
     owner: string,
     id: string,
     endpoint: MemoryEndpoint,
+    applicationId = owner,
   ): () => void {
-    const key = `${owner}:${id}`;
+    const key = endpointKey(owner, applicationId, id);
     this.#memory.set(key, endpoint);
-    const dispose = this.registerContext(owner, `__memory.${id}`, {
+    const dispose = this.registerContext(
+      owner,
+      `__memory.${id}`,
+      {
       required: false,
       resolve: async (thread, turn, signal) => {
         const recalled = await recallMemory(
@@ -104,7 +119,9 @@ export class Controller {
           blocks.map((block) => ({ ref: block.id, revision: block.revision })),
           signal,
         ),
-    });
+      },
+      applicationId,
+    );
     return () => {
       dispose();
       if (this.#memory.get(key) === endpoint) this.#memory.delete(key);
@@ -120,14 +137,25 @@ export class Controller {
     const thread = this.store.authorizeThread(owner, threadId);
     const endpoint =
       thread.memoryEndpoint &&
-      this.#memory.get(`${owner}:${thread.memoryEndpoint}`);
+      this.#memory.get(threadEndpointKey(thread, thread.memoryEndpoint));
     if (!endpoint)
       throw new ControllerError(
         "memory_unavailable",
         "Memory endpoint is unavailable",
       );
+    const access = {
+      principalId: thread.owner,
+      applicationId: applicationOf(thread),
+      workspaceId: thread.workspace,
+      threadId: thread.id,
+    };
     return bounded(
-      endpoint.read(thread, operation, input, signal),
+      endpoint.read(
+        thread,
+        operation,
+        authorizeMemoryInput(input, access),
+        signal,
+      ),
       30_000,
       signal,
     );
@@ -136,14 +164,20 @@ export class Controller {
     owner: string,
     id: string,
     source: ContextSource,
+    applicationId = owner,
   ): () => void {
-    const key = `${owner}:${id}`;
+    const key = endpointKey(owner, applicationId, id);
     this.#sources.set(key, source);
     return () => {
       if (this.#sources.get(key) === source) this.#sources.delete(key);
     };
   }
-  registerTools(owner: string, id: string, endpoint: ToolEndpoint): () => void {
+  registerTools(
+    owner: string,
+    id: string,
+    endpoint: ToolEndpoint,
+    applicationId = owner,
+  ): () => void {
     const names = new Set<string>();
     for (const definition of endpoint.definitions) {
       if (names.has(definition.name))
@@ -151,7 +185,7 @@ export class Controller {
       names.add(definition.name);
       this.#ajv.compile(definition.inputSchema);
     }
-    const key = `${owner}:${id}`;
+    const key = endpointKey(owner, applicationId, id);
     this.#tools.set(key, endpoint);
     return () => {
       if (this.#tools.get(key) === endpoint) this.#tools.delete(key);
@@ -370,7 +404,7 @@ export class Controller {
         this.store.prepare(turn.id, preparation);
       }
       const mcpEndpoint = thread.mcpEndpoint
-        ? this.#mcp.get(`${thread.owner}:${thread.mcpEndpoint}`)
+        ? this.#mcp.get(threadEndpointKey(thread, thread.mcpEndpoint))
         : undefined;
       if (thread.mcpEndpoint && !mcpEndpoint)
         throw new ControllerError(
@@ -391,7 +425,7 @@ export class Controller {
           "External MCP servers are unsupported for this execution",
         );
       const endpoint = thread.toolEndpoint
-        ? this.#tools.get(`${thread.owner}:${thread.toolEndpoint}`)
+        ? this.#tools.get(threadEndpointKey(thread, thread.toolEndpoint))
         : undefined;
       if (thread.toolEndpoint && !endpoint)
         throw new ControllerError(

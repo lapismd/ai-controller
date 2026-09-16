@@ -46,6 +46,12 @@ export class ControllerClient {
   readonly #subscriptions = new Map<string, Subscription>();
   readonly #endpoints = new Map<string, EndpointRegistration>();
   readonly #handlers = new Map<string, AbortController>();
+  #sessionToken?: string;
+  #sessionId?: string;
+  #authFallback = false;
+  get sessionId(): string | undefined {
+    return this.#sessionId;
+  }
   constructor(
     readonly options: {
       url: string;
@@ -222,10 +228,11 @@ export class ControllerClient {
   }
   private async open(): Promise<void> {
     this.options.onState?.("connecting");
-    const token =
+    const bootstrap =
       typeof this.options.token === "function"
         ? await this.options.token()
         : this.options.token;
+    const token = this.#sessionToken ?? bootstrap;
     if (this.#disposed)
       throw new ControllerError("client_closed", "Client is closed");
     const Socket = this.options.websocket ?? WebSocket;
@@ -242,6 +249,12 @@ export class ControllerClient {
       this.failPending();
       if (!this.#disposed) {
         this.options.onState?.("offline");
+        if (event.code === 4401 && this.#sessionToken && !this.#authFallback) {
+          this.#sessionToken = undefined;
+          this.#authFallback = true;
+          this.retry();
+          return;
+        }
         if (event.code !== 4401) this.retry();
       }
     });
@@ -278,7 +291,16 @@ export class ControllerClient {
       );
     });
     try {
-      await this.send("hello", undefined, { token, protocol: PROTOCOL });
+      const hello = (await this.send("hello", undefined, {
+        token,
+        protocol: PROTOCOL,
+      })) as {
+        session?: { id?: string; token?: string };
+      };
+      if (typeof hello.session?.id === "string") this.#sessionId = hello.session.id;
+      if (typeof hello.session?.token === "string")
+        this.#sessionToken = hello.session.token;
+      this.#authFallback = false;
       for (const registration of this.#endpoints.values())
         await this.register(registration);
       for (const [threadId, subscription] of this.#subscriptions)

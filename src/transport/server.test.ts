@@ -488,3 +488,186 @@ it("replays journal pages before live output and retries a failed domain commit 
     unsubscribe();
   } finally { client.dispose(); await server.close(); await controller.close(); store.close(); }
 });
+
+const readToken = "test-read-only-token-at-least-32-chars";
+const otherToken = "test-other-app-token-at-least-32-chars";
+
+function fakeController() {
+  const store = new ControllerStore(":memory:");
+  const controller = new Controller(
+    store,
+    new Map([
+      [
+        "fake",
+        {
+          capabilities: {
+            driver: "fake",
+            content: ["text" as const],
+            configuration: true,
+            resume: "none" as const,
+            approvals: false,
+            input: false,
+            tools: true,
+          },
+          close: async () => {},
+          execute: async (c) => {
+            if (c.thread.toolEndpoint) {
+              try {
+                const result = await c.callTool("read", {});
+                await c.emit({ type: "text", text: String(result.content) });
+              } catch (error) {
+                await c.emit({
+                  type: "failed",
+                  error:
+                    error instanceof Error && "code" in error
+                      ? String((error as { code: string }).code)
+                      : "execution_failed",
+                });
+                return;
+              }
+            }
+            await c.emit({ type: "completed" });
+          },
+        },
+      ],
+    ]),
+  );
+  return { store, controller };
+}
+
+describe("session authorization", () => {
+  it("rejects missing scopes, other applications, and memory identity overrides", async () => {
+    const { store, controller } = fakeController();
+    const seen: unknown[] = [];
+    const server = await serveController(controller, {
+      credentials: [
+        {
+          token,
+          principal: {
+            id: "owner",
+            applicationId: "lapis",
+            providers: ["fake"],
+            workspaces: ["root"],
+          },
+        },
+        {
+          token: readToken,
+          principal: {
+            id: "owner",
+            applicationId: "lapis",
+            providers: ["fake"],
+            workspaces: ["root"],
+            scopes: ["threads:read", "providers:read"],
+          },
+        },
+        {
+          token: otherToken,
+          principal: {
+            id: "owner",
+            applicationId: "nostr",
+            providers: ["fake"],
+            workspaces: ["root"],
+          },
+        },
+      ],
+    });
+    const owner = new ControllerClient({ url: server.url, token });
+    const reader = new ControllerClient({ url: server.url, token: readToken });
+    const other = new ControllerClient({ url: server.url, token: otherToken });
+    try {
+      await expect(
+        reader.createThread({ provider: "fake", workspace: "root" }),
+      ).rejects.toMatchObject({ code: "forbidden" });
+      const thread = await owner.createThread({
+        provider: "fake",
+        workspace: "root",
+        memoryEndpoint: "memories",
+        toolEndpoint: "app",
+      });
+      expect(thread.application).toBe("lapis");
+      const sessionId = owner.sessionId;
+      expect(sessionId).toBeTruthy();
+      await expect(other.snapshot(thread.id)).rejects.toMatchObject({
+        code: "not_found",
+      });
+      await expect(
+        other.request("events.read", { threadId: thread.id, after: "0:0" }),
+      ).rejects.toMatchObject({ code: "not_found" });
+      await owner.registerEndpoint({
+        id: "memories",
+        memory: { profile: "lapis-v1" },
+        handle: async (request) => {
+          if (request.operation === "memory.search") {
+            seen.push(request.payload);
+            return [];
+          }
+          if (request.operation === "memory.authorize") return true;
+          return [];
+        },
+      });
+      await owner.request("memory.search", {
+        threadId: thread.id,
+        input: {
+          query: "auth",
+          principalId: "intruder",
+          workspaceId: "other",
+          access: { threadId: "stolen" },
+        },
+      });
+      expect(seen[0]).toMatchObject({
+        input: {
+          query: "auth",
+          access: {
+            principalId: "owner",
+            applicationId: "lapis",
+            workspaceId: "root",
+            threadId: thread.id,
+          },
+        },
+      });
+      await other.registerEndpoint({
+        id: "app",
+        tools: [
+          {
+            name: "read",
+            description: "Read",
+            inputSchema: { type: "object" },
+            effect: "read",
+          },
+        ],
+        handle: async () => ({ content: "leaked" }),
+      });
+      const receipt = await owner.submit({
+        threadId: thread.id,
+        commandId: "tools",
+        text: "use tools",
+      });
+      await controller.drain();
+      expect((await owner.getTurn(receipt.turnId)).error).toBe(
+        "tools_unavailable",
+      );
+      server.disconnectClients();
+      const ready = new Promise<void>((resolve) => {
+        owner.options.onState = (state) => {
+          if (state === "ready") resolve();
+        };
+      });
+      await ready;
+      expect(owner.sessionId).toBe(sessionId);
+      expect(
+        await owner.submit({
+          threadId: thread.id,
+          commandId: "tools",
+          text: "use tools",
+        }),
+      ).toMatchObject({ commandId: "tools" });
+    } finally {
+      owner.dispose();
+      reader.dispose();
+      other.dispose();
+      await server.close();
+      await controller.close();
+      store.close();
+    }
+  });
+});

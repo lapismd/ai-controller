@@ -40,6 +40,7 @@ const schemas = {
     {
       id: string,
       owner: string,
+      application: string,
       provider: string,
       workspace: string,
       version: { type: "integer", minimum: 1 },

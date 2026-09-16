@@ -141,7 +141,7 @@ it("fails closed when a newer database version is opened", () => {
   store.close();
   const path = join(root, "controller.sqlite");
   const db = new DatabaseSync(path);
-  db.exec("PRAGMA user_version=2");
+  db.exec("PRAGMA user_version=3");
   db.close();
   let opened: ControllerStore | undefined;
   try {

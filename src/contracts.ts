@@ -44,6 +44,7 @@ export interface ThreadInput {
 export interface Thread extends ThreadInput {
   id: string;
   owner: string;
+  application?: string;
   payloadPolicy: PayloadPolicy;
   version: number;
   createdAt: number;
@@ -161,10 +162,39 @@ export interface Capabilities {
   input: boolean;
   tools: boolean;
 }
+export const CONTROLLER_SCOPES = [
+  "threads:read",
+  "threads:operate",
+  "memory:read",
+  "memory:write",
+  "tools:provide",
+  "providers:read",
+  "providers:configure",
+  "admin",
+] as const;
+export type ControllerScope = (typeof CONTROLLER_SCOPES)[number];
 export interface Principal {
   id: string;
+  applicationId?: string;
   providers: string[];
   workspaces: string[];
+  scopes?: ControllerScope[];
+}
+export interface AuthSession {
+  id: string;
+  principalId: string;
+  applicationId: string;
+  scopes: ControllerScope[];
+  providers: string[];
+  workspaces: string[];
+  createdAt: number;
+  expiresAt: number;
+}
+export interface MemoryAccess {
+  principalId: string;
+  applicationId: string;
+  workspaceId: string;
+  threadId: string;
 }
 export interface EndpointRequest {
   id: string;

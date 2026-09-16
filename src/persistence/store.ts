@@ -21,6 +21,20 @@ import { acquireWriter } from "./lock.js";
 
 type Row = { body: string };
 type EventRow = { sequence: number; body: string };
+export interface AuthSessionRow {
+  id: string;
+  principalId: string;
+  applicationId: string;
+  credentialFingerprint: string;
+  scopes: string[];
+  providers: string[];
+  workspaces: string[];
+  tokenHash: string;
+  createdAt: number;
+  expiresAt: number;
+  revokedAt?: number;
+}
+const SCHEMA_VERSION = 2;
 export class ControllerStore {
   readonly #db: DatabaseSync;
   readonly #unlock: () => void;
@@ -44,7 +58,7 @@ export class ControllerStore {
       const version = Number(
         this.#db.prepare("PRAGMA user_version").get()?.user_version,
       );
-      if (version > 1)
+      if (version > SCHEMA_VERSION)
         throw new ControllerError(
           "schema_unsupported",
           "Database requires a newer controller",
@@ -59,7 +73,21 @@ export class ControllerStore {
         CREATE TABLE IF NOT EXISTS events(sequence INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT UNIQUE NOT NULL, thread_id TEXT NOT NULL REFERENCES threads(id), body TEXT NOT NULL);
         CREATE INDEX IF NOT EXISTS events_thread ON events(thread_id,sequence);
         CREATE TABLE IF NOT EXISTS interactions(id TEXT PRIMARY KEY, thread_id TEXT NOT NULL REFERENCES threads(id), body TEXT NOT NULL);
-        PRAGMA user_version=1;
+        CREATE TABLE IF NOT EXISTS sessions(
+          id TEXT PRIMARY KEY,
+          principal_id TEXT NOT NULL,
+          application_id TEXT NOT NULL,
+          credential_fingerprint TEXT NOT NULL,
+          scopes TEXT NOT NULL,
+          providers TEXT NOT NULL,
+          workspaces TEXT NOT NULL,
+          token_hash TEXT NOT NULL UNIQUE,
+          created_at INTEGER NOT NULL,
+          expires_at INTEGER NOT NULL,
+          revoked_at INTEGER
+        );
+        CREATE INDEX IF NOT EXISTS sessions_credential ON sessions(credential_fingerprint);
+        PRAGMA user_version=${SCHEMA_VERSION};
       `);
       for (const table of storedTables)
         for (const row of this.#db
@@ -126,10 +154,15 @@ export class ControllerStore {
     this.#listeners.add(listener);
     return () => this.#listeners.delete(listener);
   }
-  createThread(owner: string, input: ThreadInput): Thread {
+  createThread(
+    owner: string,
+    input: ThreadInput,
+    application = owner,
+  ): Thread {
     requiredString(owner, "owner");
     requiredString(input.provider, "provider");
     requiredString(input.workspace, "workspace");
+    requiredString(application, "application");
     if (
       input.payloadPolicy &&
       !["durable", "metadata-only"].includes(input.payloadPolicy)
@@ -140,6 +173,7 @@ export class ControllerStore {
       ...input,
       id,
       owner,
+      application,
       payloadPolicy: input.payloadPolicy ?? "durable",
       version: 1,
       createdAt: Date.now(),
@@ -615,6 +649,71 @@ export class ControllerStore {
       "interactions",
     ].flatMap((table) => this.#db.prepare(`SELECT * FROM ${table}`).all());
   }
+  sessionByTokenHash(tokenHash: string): AuthSessionRow | undefined {
+    return decodeSession(
+      this.#db
+        .prepare("SELECT * FROM sessions WHERE token_hash=?")
+        .get(tokenHash),
+    );
+  }
+  activeSessionByCredential(
+    fingerprint: string,
+    now: number,
+  ): AuthSessionRow | undefined {
+    return decodeSession(
+      this.#db
+        .prepare(
+          "SELECT * FROM sessions WHERE credential_fingerprint=? AND revoked_at IS NULL AND expires_at>? ORDER BY created_at DESC",
+        )
+        .get(fingerprint, now),
+    );
+  }
+  refreshSession(id: string, expiresAt: number): AuthSessionRow {
+    return this.transaction(() => {
+      this.#db
+        .prepare("UPDATE sessions SET expires_at=? WHERE id=?")
+        .run(expiresAt, id);
+      const row = decodeSession(
+        this.#db.prepare("SELECT * FROM sessions WHERE id=?").get(id),
+      );
+      if (!row) throw new ControllerError("not_found", "Session not found");
+      return row;
+    });
+  }
+  replaceCredentialSession(row: AuthSessionRow): AuthSessionRow {
+    return this.transaction(() => {
+      this.#db
+        .prepare(
+          "UPDATE sessions SET revoked_at=? WHERE credential_fingerprint=? AND revoked_at IS NULL",
+        )
+        .run(row.createdAt, row.credentialFingerprint);
+      this.#db
+        .prepare(
+          "INSERT INTO sessions VALUES(?,?,?,?,?,?,?,?,?,?,NULL)",
+        )
+        .run(
+          row.id,
+          row.principalId,
+          row.applicationId,
+          row.credentialFingerprint,
+          JSON.stringify(row.scopes),
+          JSON.stringify(row.providers),
+          JSON.stringify(row.workspaces),
+          row.tokenHash,
+          row.createdAt,
+          row.expiresAt,
+        );
+      return row;
+    });
+  }
+  revokeSession(id: string, at: number): boolean {
+    const result = this.#db
+      .prepare(
+        "UPDATE sessions SET revoked_at=? WHERE id=? AND revoked_at IS NULL",
+      )
+      .run(at, id);
+    return Number(result.changes) > 0;
+  }
   close(): void {
     if (this.#closed) return;
     this.#closed = true;
@@ -647,6 +746,25 @@ function durableErrorCode(error?: string): string | undefined {
 }
 function decode<T>(row: unknown): T | undefined {
   return row ? (JSON.parse((row as Row).body) as T) : undefined;
+}
+function decodeSession(row: unknown): AuthSessionRow | undefined {
+  if (!row || typeof row !== "object") return;
+  const value = row as Record<string, unknown>;
+  return {
+    id: String(value.id),
+    principalId: String(value.principal_id),
+    applicationId: String(value.application_id),
+    credentialFingerprint: String(value.credential_fingerprint),
+    scopes: JSON.parse(String(value.scopes)),
+    providers: JSON.parse(String(value.providers)),
+    workspaces: JSON.parse(String(value.workspaces)),
+    tokenHash: String(value.token_hash),
+    createdAt: Number(value.created_at),
+    expiresAt: Number(value.expires_at),
+    ...(value.revoked_at == null
+      ? {}
+      : { revokedAt: Number(value.revoked_at) }),
+  };
 }
 function canonical(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;

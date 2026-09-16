@@ -138,6 +138,9 @@ const ajv = new Ajv({ strict: false, allErrors: true });
 const validators = new Map(
   Object.entries(schemas).map(([name, schema]) => [name, ajv.compile(schema)]),
 );
+export function requestMethods(): string[] {
+  return Object.keys(schemas);
+}
 export function validateRequest(
   method: string,
   params: unknown,

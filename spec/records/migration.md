@@ -174,3 +174,14 @@ in-repo tests. Nostr live recall now registers an owner-scoped memory endpoint.
 Remaining work is registry publication, lockfile refresh, installed-service
 deployment, and paid-provider acceptance. First-party execution ownership has
 already moved. Do not treat Fake/`!preparesContext` fixtures as cutover proof.
+
+## Consumer session cutover
+
+Lapis, Nostr and CLI keep sending their current hello tokens. Those tokens
+remain bootstrap credentials; missing `scopes` and `applicationId` default to
+the full grant and `principal.id`. Hello grows `{ session: { id, expiresAt } }`
+and may include a session bearer only when a session is newly issued. Older
+SDKs ignore the extra fields. After this package is released, `ControllerClient`
+uses the session bearer on reconnect and falls back to the bootstrap token if
+that bearer is revoked or expired. Do not change Lapis or Nostr in this slice
+unless a hello-compatible test fails.

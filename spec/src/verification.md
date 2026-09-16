@@ -15,6 +15,8 @@
 | AIC-MEM-003 | Implemented | src/memory/lapis/native-memory-service.test.ts; src/memory/group/service.test.ts |
 | AIC-API-001 | Implemented | src/transport/server.test.ts; src/runtime.test.ts |
 | AIC-API-002 | Implemented | src/transport/server.test.ts; src/persistence/store.test.ts |
+| AIC-API-003 | Implemented | src/auth/scopes.test.ts; src/auth/session.test.ts; src/transport/server.test.ts session authorization |
+| AIC-API-004 | Implemented | src/transport/server.test.ts memory and tool isolation; src/auth/authorize.test.ts |
 | AIC-CLI-001 | Implemented | src/cli/cli.test.ts; docs/cli/reference.md |
 | AIC-CLI-002 | Implemented | scripts/local-controller.test.mjs; src/cli/cli.test.ts default workspace |
 | AIC-PKG-001 | Implemented | scripts/check-boundaries.mjs; pnpm publint |

@@ -24,12 +24,13 @@ export class EndpointRegistry {
   readonly #pending = new Map<string, Pending>();
   register(
     owner: string,
+    applicationId: string,
     id: string,
     connectionId: string,
     send: (request: EndpointRequest) => void,
     cancel: (id: string) => void = () => {},
   ): () => void {
-    const key = `${owner}:${id}`;
+    const key = `${owner}:${applicationId}:${id}`;
     const previous = this.#entries.get(key);
     if (previous && previous.connectionId !== connectionId)
       throw new ControllerError(
@@ -48,13 +49,14 @@ export class EndpointRegistry {
   }
   request(
     owner: string,
+    applicationId: string,
     endpoint: string,
     operation: string,
     payload: Json,
     timeoutMs = 30_000,
     signal?: AbortSignal,
   ): Promise<Json> {
-    const key = `${owner}:${endpoint}`;
+    const key = `${owner}:${applicationId}:${endpoint}`;
     const entry = this.#entries.get(key);
     if (!entry)
       return Promise.reject(
@@ -113,6 +115,7 @@ export class EndpointRegistry {
   }
   respond(
     owner: string,
+    applicationId: string,
     connectionId: string,
     id: string,
     result: Json,
@@ -121,7 +124,7 @@ export class EndpointRegistry {
     const pending = this.#pending.get(id);
     if (
       !pending ||
-      !pending.key.startsWith(`${owner}:`) ||
+      !pending.key.startsWith(`${owner}:${applicationId}:`) ||
       pending.connectionId !== connectionId
     )
       throw new ControllerError(

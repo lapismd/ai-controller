@@ -1,10 +1,11 @@
 import { validateMcpServers } from "../domain/mcp.js";
 import { createServer } from "node:http";
-import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { WebSocketServer, type WebSocket } from "ws";
 import {
   ControllerError,
   PROTOCOL,
+  type AuthSession,
   type ContextBlock,
   type Json,
   type Principal,
@@ -17,6 +18,9 @@ import { Controller } from "../domain/engine.js";
 import { EndpointRegistry } from "./endpoints.js";
 import { validateRequest } from "./schema.js";
 import type { MemoryCandidate, MemoryProfile } from "../memory/recall.js";
+import { AuthSessionStore } from "../auth/session.js";
+import { requireScope } from "../auth/scopes.js";
+import { requireResource } from "../auth/authorize.js";
 
 export interface ServerCredential {
   token: string;
@@ -34,6 +38,7 @@ export async function serveController(
       "configuration_invalid",
       "Controller requires nonempty strong credentials",
     );
+  const sessions = new AuthSessionStore(controller.store);
   const endpoints = new EndpointRegistry();
   const http = createServer((_req, res) => {
     res.writeHead(404);
@@ -42,7 +47,7 @@ export async function serveController(
   const wss = new WebSocketServer({ server: http, maxPayload: 1024 * 1024 });
   wss.on("connection", (socket) => {
     const connectionId = randomUUID();
-    let principal: Principal | undefined;
+    let session: AuthSession | undefined;
     let inFlight = 0;
     const subscriptions = new Map<string, () => void>();
     const registrations = new Map<string, () => void>();
@@ -78,7 +83,7 @@ export async function serveController(
             "invalid_input",
             "Request identity is invalid",
           );
-        if (!principal) {
+        if (!session) {
           if (request.method !== "hello" || typeof request.token !== "string")
             throw new ControllerError(
               "authentication_failed",
@@ -89,28 +94,33 @@ export async function serveController(
               "protocol_unsupported",
               "Unsupported controller protocol",
             );
-          const digest = (text: string) =>
-            createHash("sha256").update(text).digest();
-          principal = options.credentials.find((item) =>
-            timingSafeEqual(
-              digest(item.token),
-              digest(request.token as string),
-            ),
-          )?.principal;
-          if (!principal)
-            throw new ControllerError(
-              "authentication_failed",
-              "Handshake rejected",
-            );
+          const issued = sessions.hello(
+            request.token,
+            options.credentials,
+            request.scopes,
+          );
+          session = issued.session;
           clearTimeout(timeout);
-          send({ id, result: { protocol: PROTOCOL, principal: principal.id } });
+          send({
+            id,
+            result: {
+              protocol: PROTOCOL,
+              principal: session.principalId,
+              session: {
+                id: session.id,
+                expiresAt: session.expiresAt,
+                ...(issued.token ? { token: issued.token } : {}),
+              },
+            },
+          });
           return;
         }
         const method = String(request.method);
         const params = request.params ?? {};
         validateRequest(method, params);
-        const owner = principal.id;
-        const result = await dispatch(method, params, principal, controller, {
+        const owner = session.principalId;
+        const applicationId = session.applicationId;
+        const result = await dispatch(method, params, session, controller, {
           subscribe(threadId, after) {
             subscriptions.get(threadId)?.();
             const snapshot = controller.store.snapshot(owner, threadId);
@@ -139,6 +149,7 @@ export async function serveController(
             registrations.get(endpointId)?.();
             const unregister = endpoints.register(
               owner,
+              applicationId,
               endpointId,
               connectionId,
               (request) => send({ type: "endpoint.request", request }),
@@ -152,6 +163,7 @@ export async function serveController(
             ) =>
               endpoints.request(
                 owner,
+                applicationId,
                 endpointId,
                 operation,
                 payload,
@@ -161,7 +173,10 @@ export async function serveController(
             try {
               if (input.mcp)
                 disposers.push(
-                  controller.registerMcp(owner, endpointId, {
+                  controller.registerMcp(
+                    owner,
+                    endpointId,
+                    {
                     resolve: async (thread, signal) => {
                       const value = await call(
                         "mcp.resolve",
@@ -171,7 +186,9 @@ export async function serveController(
                       validateMcpServers(value);
                       return value;
                     },
-                  }),
+                    },
+                    applicationId,
+                  ),
                 );
               if (input.memory)
                 disposers.push(
@@ -216,7 +233,7 @@ export async function serveController(
                         },
                         signal,
                       ),
-                  }),
+                  }, applicationId),
                 );
               if (input.context)
                 disposers.push(
@@ -250,7 +267,7 @@ export async function serveController(
                         },
                         signal,
                       )) === true,
-                  }),
+                  }, applicationId),
                 );
               if (input.tools)
                 disposers.push(
@@ -280,7 +297,7 @@ export async function serveController(
                         );
                       return result as unknown as ToolResult;
                     },
-                  }),
+                  }, applicationId),
                 );
             } catch (error) {
               disposers.reverse().forEach((dispose) => dispose());
@@ -294,6 +311,7 @@ export async function serveController(
           respond(input) {
             endpoints.respond(
               owner,
+              applicationId,
               connectionId,
               String(input.id),
               input.result as Json,
@@ -315,7 +333,7 @@ export async function serveController(
                 : "Controller request failed",
           },
         });
-        if (!principal)
+        if (!session)
           socket.close(
             code === "protocol_unsupported" ? 4402 : 4401,
             code === "protocol_unsupported"
@@ -357,15 +375,21 @@ type Connection = {
 function dispatch(
   method: string,
   p: Record<string, unknown>,
-  principal: Principal,
+  session: AuthSession,
   controller: Controller,
   connection: Connection,
 ): unknown {
+  requireScope(session, method, p);
   const store = controller.store;
-  const owner = principal.id;
-  const allowed = (thread: import("../contracts.js").Thread) =>
-    principal.providers.includes(thread.provider) &&
-    principal.workspaces.includes(thread.workspace);
+  const owner = session.principalId;
+  const allowed = (thread: import("../contracts.js").Thread) => {
+    try {
+      requireResource(session, thread);
+      return true;
+    } catch {
+      return false;
+    }
+  };
   let targetThread = typeof p.threadId === "string" ? p.threadId : undefined;
   if (typeof p.turnId === "string")
     targetThread = store.turn(p.turnId)?.threadId;
@@ -373,8 +397,7 @@ function dispatch(
     targetThread = store.interaction(String(p.id))?.threadId;
   if (method === "commands.get")
     targetThread = store.receipt(owner, String(p.commandId))?.threadId;
-  if (targetThread && !allowed(store.authorizeThread(owner, targetThread)))
-    throw new ControllerError("not_found", "Thread not found");
+  if (targetThread) requireResource(session, store.authorizeThread(owner, targetThread));
   switch (method) {
     case "interactions.list":
       store.authorizeThread(owner, String(p.threadId));
@@ -399,8 +422,8 @@ function dispatch(
     }
     case "providers.models": {
       if (
-        !principal.providers.includes(String(p.provider)) ||
-        !principal.workspaces.includes(String(p.workspace))
+        !session.providers.includes(String(p.provider)) ||
+        !session.workspaces.includes(String(p.workspace))
       )
         throw new ControllerError(
           "forbidden",
@@ -418,23 +441,28 @@ function dispatch(
       return {
         protocol: PROTOCOL,
         threads: store.threads(owner).filter(allowed).length,
-        providers: principal.providers,
+        providers: session.providers,
+        session: session.id,
       };
     case "providers.list":
-      return principal.providers.map((id) => ({
+      return session.providers.map((id) => ({
         id,
         capabilities: controller.providers.get(id)?.capabilities ?? null,
       }));
     case "threads.create": {
       if (
-        !principal.providers.includes(String(p.provider)) ||
-        !principal.workspaces.includes(String(p.workspace))
+        !session.providers.includes(String(p.provider)) ||
+        !session.workspaces.includes(String(p.workspace))
       )
         throw new ControllerError(
           "forbidden",
           "Provider or workspace is not authorized",
         );
-      return store.createThread(owner, p as unknown as ThreadInput);
+      return store.createThread(
+        owner,
+        p as unknown as ThreadInput,
+        session.applicationId,
+      );
     }
     case "threads.list":
       return store.threads(owner).filter(allowed);

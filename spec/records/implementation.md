@@ -131,3 +131,13 @@ execution uses the same SDK and registers an owner-scoped `nostr.memory`
 endpoint so the controller owns recall, search, and get. Publication, registry
 lockfile refresh, installed-service deployment and paid-provider acceptance
 remain later approved gates.
+
+## Session authorization checkpoint
+
+Hello now binds a persisted AuthSession. Existing file and managed tokens are
+bootstrap credentials with the full default scope set. The SDK reconnects with
+the issued session bearer and falls back to the bootstrap token; it still does
+not resubmit mutations. Memory and application-tool registrations are isolated
+by principal and application. `ai-host` remains an in-process executor without
+controller-user scopes. WebSocket tickets, cookies, DPoP and T3 Connect are
+unissued seams. T3 here is pingdotgg/t3code environment authentication.
