@@ -78,8 +78,8 @@ stdin, not command arguments or status output. The compiled executable stages it
 runtime dependencies outside the source tree so previous binaries/extraction
 caches cannot be recursively embedded. `pnpm local:controller` builds that
 binary, atomically installs `~/.local/bin/lapis-ai-controller`, initializes a
-missing default config when `--workspace` is supplied, reloads the user service,
-and waits for an authenticated status handshake.
+missing default config with `--workspace` or `~/.lapis/ai-controller`, reloads
+the user service, and waits for an authenticated status handshake.
 
 The new package and current sibling fixes are unpublished. Ignored validation
 hooks install built tarballs without modifying tracked registry lockfile entries.

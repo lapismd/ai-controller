@@ -16,7 +16,7 @@
 | AIC-API-001 | Implemented | src/transport/server.test.ts; src/runtime.test.ts |
 | AIC-API-002 | Implemented | src/transport/server.test.ts; src/persistence/store.test.ts |
 | AIC-CLI-001 | Implemented | src/cli/cli.test.ts; docs/cli/reference.md |
-| AIC-CLI-002 | Implemented | scripts/local-controller.test.mjs |
+| AIC-CLI-002 | Implemented | scripts/local-controller.test.mjs; src/cli/cli.test.ts default workspace |
 | AIC-PKG-001 | Implemented | scripts/check-boundaries.mjs; pnpm publint |
 | AIC-GOV-001 | Implemented | pnpm spec:check |
 | AIC-GOV-002 | Implemented | pnpm spec:check |

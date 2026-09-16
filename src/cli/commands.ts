@@ -7,9 +7,9 @@ export interface CommandSpec {
 export const COMMANDS: CommandSpec[] = [
   {
     path: "init",
-    summary: "Initialize private configuration and credentials.",
+    summary:
+      "Initialize private configuration and credentials. Defaults --workspace to ~/.lapis/ai-controller.",
     options: ["workspace"],
-    required: ["workspace"],
   },
   {
     path: "serve",

@@ -16,10 +16,11 @@ Usage:
 
 Defaults:
   --config        ~/.config/lapis-ai-controller/config.json
+  --workspace     ~/.lapis/ai-controller
   --instance      default
   --install-path  ~/.local/bin/lapis-ai-controller
 
---workspace is required only when the configuration file does not exist.`;
+--workspace overrides the first-run default when configuration does not exist.`;
 
 export function parseOptions(args) {
   const result = { help: false };
@@ -65,12 +66,14 @@ export function resolveSelection({
       join(home, ".local", "bin", BINARY),
   );
   const workspaceSource =
-    options.workspace ?? env.LAPIS_AI_CONTROLLER_WORKSPACE;
+    options.workspace ??
+    env.LAPIS_AI_CONTROLLER_WORKSPACE ??
+    join(home, ".lapis", "ai-controller");
   return {
     configFile,
     installPath,
     instance: options.instance ?? "default",
-    workspace: workspaceSource ? resolve(workspaceSource) : undefined,
+    workspace: resolve(workspaceSource),
   };
 }
 
@@ -145,11 +148,6 @@ export async function runLocalController(
   }
   const selection = resolveSelection({ home, env, options });
   const configExists = await io.exists(selection.configFile);
-  if (!configExists && !selection.workspace) {
-    throw new Error(
-      "Missing configuration. Pass --workspace to initialize one.",
-    );
-  }
 
   if (configExists && (await io.exists(selection.installPath))) {
     await io.output(

@@ -12,10 +12,11 @@ initializes the default configuration when needed, reloads the user service, and
 waits until `status` reports `lapis-ai-controller/1`:
 
 ```sh
-pnpm local:controller -- --workspace /absolute/workspace
+pnpm local:controller
 ```
 
-`pnpm local:agent` is the same task.
+`pnpm local:agent` is the same task. Pass `--workspace /absolute/workspace`
+after `--` to override the first-run default.
 
 After setup, ordinary commands need no path override:
 
@@ -25,10 +26,10 @@ lapis-ai-controller doctor
 lapis-ai-controller providers list
 ```
 
-Defaults are `~/.config/lapis-ai-controller/config.json` and
-`~/.local/bin/lapis-ai-controller`. Override with `--config`, `--instance`, or
-`--install-path` after `--`. `--workspace` is required only when that config
-does not exist. The command never prints tokens or private payloads.
+Defaults are `~/.config/lapis-ai-controller/config.json`,
+`~/.local/bin/lapis-ai-controller`, and workspace `~/.lapis/ai-controller`.
+Override with `--config`, `--instance`, `--install-path`, or `--workspace` after
+`--`. The command never prints tokens or private payloads.
 
 To run a checkout-local binary without installing a user service, build with
 `pnpm build:cli` and invoke `artifacts/lapis-ai-controller` directly. Native

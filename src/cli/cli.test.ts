@@ -6,7 +6,7 @@ import { parseArgs, COMMANDS, markdownHelp } from "./commands.js";
 import { runCli } from "./main.js";
 import { human } from "./output.js";
 import { CliError, cliFailure } from "./types.js";
-import { initialize } from "./config.js";
+import { defaultWorkspacePath, initialize } from "./config.js";
 import { ControllerStore } from "../persistence/store.js";
 import { Controller } from "../domain/engine.js";
 import { serveController } from "../transport/server.js";
@@ -21,6 +21,35 @@ describe("operator interface", () => {
       "Unknown option",
     );
     expect(parseArgs(["help", "threads"]).help).toBe(true);
+    expect(() => parseArgs(["init"])).not.toThrow();
+  });
+  it("defaults init workspace to ~/.lapis/ai-controller", async () => {
+    const home = await mkdtemp(join(tmpdir(), "controller-home-"));
+    const dir = await mkdtemp(join(tmpdir(), "controller-cli-"));
+    const path = join(dir, "config.json");
+    const previousHome = process.env.HOME;
+    const output: string[] = [];
+    try {
+      process.env.HOME = home;
+      expect(defaultWorkspacePath()).toBe(join(home, ".lapis", "ai-controller"));
+      expect(
+        await runCli(["init", "--config", path, "--json"], {
+          stdout: (text) => output.push(text),
+          stderr: (text) => output.push(text),
+        }),
+      ).toBe(0);
+      expect(JSON.parse(output[0]!).data.workspace).toBe(
+        join(home, ".lapis", "ai-controller"),
+      );
+      expect((await stat(join(home, ".lapis", "ai-controller"))).isDirectory()).toBe(
+        true,
+      );
+    } finally {
+      if (previousHome === undefined) delete process.env.HOME;
+      else process.env.HOME = previousHome;
+      await rm(home, { recursive: true, force: true });
+      await rm(dir, { recursive: true, force: true });
+    }
   });
   it("initializes private config idempotently and never reveals tokens in diagnostics", async () => {
     const dir = await mkdtemp(join(tmpdir(), "controller-cli-"));

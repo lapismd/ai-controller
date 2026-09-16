@@ -4,7 +4,7 @@ Generated from the command tree.
 
 ## init
 
-Initialize private configuration and credentials.
+Initialize private configuration and credentials. Defaults --workspace to ~/.lapis/ai-controller.
 
 Options: `--workspace`.
 

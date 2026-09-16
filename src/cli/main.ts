@@ -5,6 +5,7 @@ import { cliFailure } from "./types.js";
 import { startService } from "../service.js";
 import {
   defaultConfigPath,
+  defaultWorkspacePath,
   initialize,
   readConfig,
   readToken,
@@ -57,7 +58,10 @@ export async function runCli(
     }
     const path = String(o.config || defaultConfigPath());
     if (command === "init") {
-      const config = await initialize(path, String(o.workspace));
+      const config = await initialize(
+        path,
+        String(o.workspace || defaultWorkspacePath()),
+      );
       write(command, { config: path, workspace: config.workspaces.default });
       return 0;
     }

@@ -55,7 +55,7 @@ describe("local controller installer", () => {
       configFile: "/Users/steve/.config/lapis-ai-controller/config.json",
       installPath: "/Users/steve/.local/bin/lapis-ai-controller",
       instance: "default",
-      workspace: undefined,
+      workspace: "/Users/steve/.lapis/ai-controller",
     });
     expect(
       resolveSelection({
@@ -233,18 +233,40 @@ describe("local controller installer", () => {
     }
   });
 
-  it("fails closed when first-run configuration has no workspace", async () => {
-    await expect(
-      runLocalController(
-        { args: [], home: "/tmp/home", env: {}, root: "/tmp/repo" },
-        {
-          log: () => {},
-          exists: async () => false,
-          install: async () => {},
-          run: async () => {},
-          output: async () => ({ code: 1, stdout: "" }),
+  it("defaults first-run workspace to ~/.lapis/ai-controller", async () => {
+    const commands = [];
+    const home = "/tmp/home";
+    const root = "/tmp/repo";
+    const artifact = join(root, "artifacts", "lapis-ai-controller");
+    await runLocalController(
+      { args: [], home, env: {}, root, artifact },
+      {
+        log: () => {},
+        exists: async () => false,
+        install: async () => {},
+        async run(command, args) {
+          commands.push(["run", command, ...args]);
         },
-      ),
-    ).rejects.toThrow("Pass --workspace");
+        async output() {
+          return {
+            code: 0,
+            stdout: JSON.stringify({ data: { protocol: PROTOCOL } }),
+          };
+        },
+      },
+    );
+    expect(
+      commands.find((entry) => entry[0] === "run" && entry[2] === "init"),
+    ).toEqual([
+      "run",
+      join(home, ".local", "bin", "lapis-ai-controller"),
+      "init",
+      "--workspace",
+      join(home, ".lapis", "ai-controller"),
+      "--config",
+      join(home, ".config", "lapis-ai-controller", "config.json"),
+      "--instance",
+      "default",
+    ]);
   });
 });

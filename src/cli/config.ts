@@ -24,6 +24,11 @@ export function defaultConfigPath(): string {
     "config.json",
   );
 }
+export function defaultWorkspacePath(
+  home = process.env.HOME || homedir(),
+): string {
+  return join(home, ".lapis", "ai-controller");
+}
 export async function readConfig(path: string): Promise<ServiceConfig> {
   const content: unknown = JSON.parse(await readFile(path, "utf8"));
   return validateConfig(content);
@@ -115,6 +120,7 @@ export async function initialize(
   workspace: string,
 ): Promise<ServiceConfig> {
   const absolute = resolve(path);
+  const resolvedWorkspace = resolve(workspace);
   const root = dirname(absolute);
   await mkdir(root, { recursive: true, mode: 0o700 });
   const tokenFile = join(root, "token");
@@ -127,7 +133,7 @@ export async function initialize(
       "lapis-ai-controller",
       "controller.sqlite",
     ),
-    workspaces: { default: resolve(workspace) },
+    workspaces: { default: resolvedWorkspace },
     providers: [
       { id: "codex", driver: "acp", agent: "codex" },
       { id: "cursor", driver: "acp", agent: "cursor" },
@@ -147,7 +153,7 @@ export async function initialize(
   try {
     await stat(absolute);
     const existing = await readConfig(absolute);
-    if (existing.workspaces.default !== resolve(workspace))
+    if (existing.workspaces.default !== resolvedWorkspace)
       throw new ControllerError(
         "configuration_conflict",
         "Configuration exists for a different workspace",
@@ -157,6 +163,7 @@ export async function initialize(
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
   }
+  await mkdir(resolvedWorkspace, { recursive: true, mode: 0o700 });
   try {
     await writeFile(tokenFile, `${randomBytes(32).toString("base64url")}\n`, {
       flag: "wx",

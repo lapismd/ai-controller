@@ -35,7 +35,7 @@ Endpoint disposal revokes tools, context and memory registrations immediately.
 | AIC-API-001  | Every API operation MUST authorize its principal and object scope. The shared client MUST own reconnect and atomic snapshot/event application without resubmitting mutations.                                                |
 | AIC-API-002  | Wire and stored schemas MUST be versioned and validated. Unsupported versions MUST fail explicitly and slow subscribers MUST have bounded buffers.                                                                           |
 | AIC-CLI-001  | The Deno executable MUST expose typed service, execution, interaction, context and memory commands with generated help, human output, versioned JSON/NDJSON and stable exit classes. Secrets MUST NOT appear in diagnostics. |
-| AIC-CLI-002  | `pnpm local:controller` MUST build the current checkout, atomically install `lapis-ai-controller` at `~/.local/bin/lapis-ai-controller` by default, initialize missing default configuration when `--workspace` is supplied, reload the user service, and wait until `status` reports protocol `lapis-ai-controller/1`. It MUST NOT print tokens or private payloads. |
+| AIC-CLI-002  | `pnpm local:controller` MUST build the current checkout, atomically install `lapis-ai-controller` at `~/.local/bin/lapis-ai-controller` by default, initialize missing default configuration with `--workspace` or `~/.lapis/ai-controller`, reload the user service, and wait until `status` reports protocol `lapis-ai-controller/1`. It MUST NOT print tokens or private payloads. |
 | AIC-PKG-001  | Browser SDK exports MUST exclude server and consumer dependencies. Published dependencies MUST use registry semver ranges.                                                                                                   |
 
 Private payloads remain volatile where the integration selects metadata-only
@@ -98,20 +98,22 @@ CLI compilation stages installed runtime packages in an isolated temporary tree.
 Previous executables and extraction caches never enter the next executable.
 `pnpm local:controller` is the developer install path: it builds that executable,
 replaces `~/.local/bin/lapis-ai-controller` atomically, initializes the default
-config only when missing and `--workspace` is supplied, then reloads the user
-service and waits for an authenticated `status` handshake. Building alone still
-does not install or start a service.
+config only when missing using `--workspace` or `~/.lapis/ai-controller`, then
+reloads the user service and waits for an authenticated `status` handshake.
+Building alone still does not install or start a service.
 
 ### AIC-CLI-002 acceptance details
 
 Local controller installation verifies:
 
-- Default install and config paths are `~/.local/bin/lapis-ai-controller` and
-  `~/.config/lapis-ai-controller/config.json`, with `--config`, `--workspace`,
-  `--instance`, and `--install-path` overrides.
+- Default install, config, and workspace paths are
+  `~/.local/bin/lapis-ai-controller`,
+  `~/.config/lapis-ai-controller/config.json`, and `~/.lapis/ai-controller`,
+  with `--config`, `--workspace`, `--instance`, and `--install-path` overrides.
 - The executable is copied to a temporary sibling and renamed into place.
-- A missing config fails unless `--workspace` is supplied; an existing config
-  is reused without rewriting tokens.
+- A missing config initializes `~/.lapis/ai-controller` unless `--workspace` or
+  `LAPIS_AI_CONTROLLER_WORKSPACE` is supplied; an existing config is reused
+  without rewriting tokens.
 - After service reload, `status --json` reports `lapis-ai-controller/1` and
   command output never includes token bytes or private payloads.
 
