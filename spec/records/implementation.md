@@ -76,7 +76,10 @@ inspection. Human output and versioned JSON/NDJSON share a typed command tree;
 `docs/cli/reference.md` is generated. Credentials use private files or managed
 stdin, not command arguments or status output. The compiled executable stages its
 runtime dependencies outside the source tree so previous binaries/extraction
-caches cannot be recursively embedded.
+caches cannot be recursively embedded. `pnpm local:controller` builds that
+binary, atomically installs `~/.local/bin/lapis-ai-controller`, initializes a
+missing default config when `--workspace` is supplied, reloads the user service,
+and waits for an authenticated status handshake.
 
 The new package and current sibling fixes are unpublished. Ignored validation
 hooks install built tarballs without modifying tracked registry lockfile entries.

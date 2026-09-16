@@ -48,6 +48,8 @@
     "test": "vitest run",
     "build": "tsc && node scripts/bundle.mjs",
     "build:cli": "deno task build",
+    "local:controller": "node scripts/local-controller.mjs",
+    "local:agent": "node scripts/local-controller.mjs",
     "spec:check": "spec-validator check",
     "spec:validate": "spec-validator validate",
     "spec:first": "spec-validator first",

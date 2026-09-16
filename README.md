@@ -6,30 +6,39 @@ mechanics; applications supply authorized tools, context and storage adapters.
 
 ## Run locally
 
-Build the verified local dependencies first, then run `pnpm build:cli`. The binary
-is `artifacts/lapis-ai-controller`; native agent executables and credentials remain
-separate dependencies. During the unpublished migration, use the temporary package
-validation setup documented in [the migration record](spec/records/migration.md).
+The developer install path matches Nostr's `pnpm local:agent`. It builds the
+current checkout, atomically installs `~/.local/bin/lapis-ai-controller`,
+initializes the default configuration when needed, reloads the user service, and
+waits until `status` reports `lapis-ai-controller/1`:
 
 ```sh
-artifacts/lapis-ai-controller init --workspace /absolute/workspace
-artifacts/lapis-ai-controller doctor
-artifacts/lapis-ai-controller serve
+pnpm local:controller -- --workspace /absolute/workspace
 ```
 
-In another terminal:
+`pnpm local:agent` is the same task.
+
+After setup, ordinary commands need no path override:
 
 ```sh
-artifacts/lapis-ai-controller status --json
-artifacts/lapis-ai-controller providers list
-artifacts/lapis-ai-controller providers models --provider codex --workspace default
-artifacts/lapis-ai-controller threads list --json
+lapis-ai-controller status --json
+lapis-ai-controller doctor
+lapis-ai-controller providers list
 ```
+
+Defaults are `~/.config/lapis-ai-controller/config.json` and
+`~/.local/bin/lapis-ai-controller`. Override with `--config`, `--instance`, or
+`--install-path` after `--`. `--workspace` is required only when that config
+does not exist. The command never prints tokens or private payloads.
+
+To run a checkout-local binary without installing a user service, build with
+`pnpm build:cli` and invoke `artifacts/lapis-ai-controller` directly. Native
+agent executables and credentials remain separate dependencies. During the
+unpublished migration, use the temporary package validation setup documented
+in [the migration record](spec/records/migration.md).
 
 `init` writes private configuration and token files. Edit the configuration to name
 provider instances and workspace roots; credentials grant explicit provider and
-workspace access. Use `--config PATH` for an isolated instance. `service` commands
-manage a user service on macOS or Linux; building does not install or start one.
+workspace access. Use `--config PATH` for an isolated instance.
 
 See the generated [CLI reference](docs/cli/reference.md) for thread configuration,
 idempotent turn submission, cancellation, interactions, tools, prepared context,

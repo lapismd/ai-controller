@@ -5,6 +5,7 @@
     "test": "pnpm test",
     "build": "pnpm build && node scripts/build-cli.mjs",
     "serve": "pnpm build && deno run -A dist/main.js serve",
+    "local:controller": "node scripts/local-controller.mjs",
     "spec:check": "pnpm spec:check"
   }
 }
