@@ -85,6 +85,17 @@ export class ControllerClient {
   cancel(turnId: string): Promise<unknown> {
     return this.request("turns.cancel", { turnId });
   }
+  resolveTurn(
+    turnId: string,
+    outcome: "failed" | "cancelled",
+    confirmation: { externalStopped: true },
+  ): Promise<Turn> {
+    return this.request("turns.resolve", {
+      turnId,
+      outcome,
+      externalStopped: confirmation.externalStopped,
+    });
+  }
   respond(id: string, response: Json): Promise<unknown> {
     return this.request("interactions.respond", { id, response });
   }

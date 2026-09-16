@@ -339,6 +339,26 @@ export class ControllerStore {
       return next;
     });
   }
+  resolveUncertain(id: string, outcome: "failed" | "cancelled"): void {
+    this.transaction(() => {
+      const turn = this.turn(id);
+      if (!turn || !["interrupted", "submission-unknown"].includes(turn.state))
+        throw new ControllerError(
+          "resolution_invalid",
+          "Turn has no uncertain outcome",
+        );
+      const error = "operator_verified_stopped";
+      this.saveTurn({ ...turn, state: outcome, error, updatedAt: Date.now() });
+      this.append(
+        turn.threadId,
+        "turn.state",
+        { state: outcome, error },
+        id,
+        undefined,
+        true,
+      );
+    });
+  }
   prepare(turnId: string, preparation: Preparation): void {
     this.transaction(() => {
       const turn = this.turn(turnId)!;

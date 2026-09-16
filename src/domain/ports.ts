@@ -29,6 +29,8 @@ export interface ExecutionContext {
   preparation: Preparation;
   tools: ToolDefinition[];
   signal: AbortSignal;
+  /** Persist the dispatch boundary immediately before sending authored work. */
+  dispatch(): Promise<void>;
   emit(event: RuntimeEvent): Promise<void>;
   bindSession(id: string): Promise<void>;
   callTool(

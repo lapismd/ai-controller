@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { ControllerStore } from "../persistence/store.js";
 import { Controller } from "./engine.js";
 import type { ExecutionProvider } from "./ports.js";
@@ -277,4 +280,166 @@ describe("controller execution", () => {
     await controller.close();
     store.close();
   });
+});
+
+it("classifies a provider setup failure before prompt dispatch as failed", async () => {
+  const store = new ControllerStore(":memory:");
+  const controller = new Controller(
+    store,
+    new Map([
+      [
+        "fake",
+        {
+          capabilities,
+          close: async () => {},
+          execute: async () => {
+            throw new Error("Provider setup failed");
+          },
+        },
+      ],
+    ]),
+  );
+  try {
+    const thread = store.createThread("owner", {
+      provider: "fake",
+      workspace: "root",
+    });
+    const receipt = controller.submit("owner", {
+      threadId: thread.id,
+      commandId: "setup",
+      text: "authored",
+    });
+    await controller.drain();
+    expect(store.turn(receipt.turnId)?.state).toBe("failed");
+  } finally {
+    await controller.close();
+    store.close();
+  }
+});
+
+it("fences uncertain workspace execution until an explicit stopped-work resolution", async () => {
+  const store = new ControllerStore(":memory:");
+  let calls = 0;
+  const controller = new Controller(
+    store,
+    new Map([
+      [
+        "fake",
+        {
+          capabilities,
+          close: async () => {},
+          execute: async (c) => {
+            calls++;
+            await c.emit({ type: "text", text: "started" });
+            if (calls === 1) throw new Error("Native connection lost");
+            await c.emit({ type: "completed" });
+          },
+        },
+      ],
+    ]),
+  );
+  try {
+    const thread = store.createThread("owner", {
+      provider: "fake",
+      workspace: "root",
+    });
+    const first = controller.submit("owner", {
+      threadId: thread.id,
+      commandId: "first",
+      text: "one",
+    });
+    const second = controller.submit("owner", {
+      threadId: thread.id,
+      commandId: "second",
+      text: "two",
+    });
+    await controller.drain();
+    expect(store.turn(first.turnId)?.state).toBe("interrupted");
+    expect(store.turn(second.turnId)?.state).toBe("queued");
+    expect(calls).toBe(1);
+    expect(() =>
+      controller.resolve("owner", first.turnId, "failed", false),
+    ).toThrow("stopped");
+    controller.resolve("owner", first.turnId, "failed", true);
+    await controller.drain();
+    expect(store.turn(second.turnId)?.state).toBe("completed");
+    expect(calls).toBe(2);
+    expect(
+      controller.submit("owner", {
+        threadId: thread.id,
+        commandId: "first",
+        text: "one",
+      }),
+    ).toEqual(first);
+    expect(
+      store.events(
+        "owner",
+        thread.id,
+        store.snapshot("owner", thread.id).cursor,
+        100,
+      ),
+    ).toEqual([]);
+  } finally {
+    await controller.close();
+    store.close();
+  }
+});
+
+it("keeps an uncertain workspace fenced after a database restart", async () => {
+  const root = mkdtempSync(join(tmpdir(), "controller-fence-"));
+  const path = join(root, "controller.sqlite");
+  let store = new ControllerStore(path);
+  let executions = 0;
+  const thread = store.createThread("owner", {
+    provider: "fake",
+    workspace: "root",
+  });
+  const first = store.accept("owner", {
+    threadId: thread.id,
+    commandId: "first",
+    text: "one",
+  });
+  const next = store.accept("owner", {
+    threadId: thread.id,
+    commandId: "next",
+    text: "two",
+  });
+  store.transition(first.turnId, "dispatching");
+  store.close();
+  store = new ControllerStore(path);
+  const controller = new Controller(
+    store,
+    new Map([
+      [
+        "fake",
+        {
+          capabilities,
+          close: async () => {},
+          execute: async (c) => {
+            executions++;
+            await c.dispatch();
+            await c.emit({ type: "completed" });
+          },
+        },
+      ],
+    ]),
+  );
+  try {
+    controller.start();
+    await controller.drain();
+    expect(store.turn(first.turnId)?.state).toBe("submission-unknown");
+    expect(store.turn(next.turnId)?.state).toBe("queued");
+    expect(executions).toBe(0);
+    expect(() =>
+      controller.resolve("outsider", first.turnId, "failed", true),
+    ).toThrow("not found");
+    controller.resolve("owner", first.turnId, "cancelled", true);
+    await controller.drain();
+    expect(executions).toBe(1);
+    expect(store.turn(next.turnId)?.state).toBe("completed");
+  } finally {
+    await controller.close();
+    store.close();
+    rmSync(root, { recursive: true, force: true });
+  }
 });

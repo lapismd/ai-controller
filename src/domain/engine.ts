@@ -197,6 +197,44 @@ export class Controller {
     });
     this.#active.get(turnId)?.abort.abort();
   }
+  resolve(
+    owner: string,
+    turnId: string,
+    outcome: "failed" | "cancelled",
+    externalStopped: boolean,
+  ): void {
+    const turn = this.requireTurn(owner, turnId);
+    if (!externalStopped)
+      throw new ControllerError(
+        "resolution_required",
+        "Verify external work has stopped before resolving this turn",
+      );
+    if (!["failed", "cancelled"].includes(outcome))
+      throw new ControllerError(
+        "invalid_input",
+        "Resolution outcome must be failed or cancelled",
+      );
+    if (
+      !["submission-unknown", "interrupted"].includes(turn.state) ||
+      this.#active.has(turn.id)
+    )
+      throw new ControllerError(
+        "resolution_invalid",
+        "Only inactive uncertain turns can be resolved",
+      );
+    this.store.transaction(() => {
+      this.store.append(
+        turn.threadId,
+        "turn.resolved",
+        { outcome, externalStopped: true },
+        turn.id,
+        undefined,
+        true,
+      );
+      this.store.resolveUncertain(turn.id, outcome);
+    });
+    this.schedule();
+  }
   respond(owner: string, id: string, response: Json): void {
     const interaction = this.store.interaction(id);
     if (!interaction)
@@ -287,6 +325,16 @@ export class Controller {
         continue;
       const thread = this.store.thread(turn.threadId)!;
       const workspace = thread.workspace;
+      if (
+        this.store
+          .turns()
+          .some(
+            (candidate) =>
+              ["submission-unknown", "interrupted"].includes(candidate.state) &&
+              this.store.thread(candidate.threadId)?.workspace === workspace,
+          )
+      )
+        continue;
       if (
         [...this.#active.values()].some(
           (active) => active.workspace === workspace,
@@ -398,7 +446,6 @@ export class Controller {
       };
       await authorizePreparation(thread, preparation, this.#sources, signal);
       signal.throwIfAborted();
-      this.store.transition(turn.id, "dispatching");
       await provider.execute({
         thread,
         turn,
@@ -406,6 +453,17 @@ export class Controller {
         tools: structuredClone(combined.definitions),
         mcpServers,
         signal,
+        dispatch: async () => {
+          signal.throwIfAborted();
+          await authorizePreparation(
+            thread,
+            preparation,
+            this.#sources,
+            signal,
+          );
+          signal.throwIfAborted();
+          this.store.transition(turn.id, "dispatching");
+        },
         emit: (event) => this.ingest(turn.id, event),
         bindSession: async (id) => this.store.bindSession(thread.id, id),
         callTool: (name, input, nativeId) =>
@@ -424,8 +482,8 @@ export class Controller {
       if (!isTerminal(this.store.turn(turn.id)!.state))
         this.store.transition(
           turn.id,
-          signal.aborted ? "cancelled" : "interrupted",
-          signal.aborted ? "cancelled" : "missing_completion",
+          "interrupted",
+          signal.aborted ? "cancellation_unconfirmed" : "missing_completion",
         );
     } catch (error) {
       const current = this.store.turn(turn.id)!;
@@ -433,7 +491,9 @@ export class Controller {
         const code =
           error instanceof ControllerError ? error.code : "execution_failed";
         const state = signal.aborted
-          ? "interrupted"
+          ? ["queued", "preparing", "prepared"].includes(current.state)
+            ? "cancelled"
+            : "interrupted"
           : current.state === "dispatching"
             ? "submission-unknown"
             : ["running", "waiting"].includes(current.state)
@@ -468,7 +528,7 @@ export class Controller {
       else if (event.type === "failed")
         this.store.transition(turnId, "failed", event.code);
       else {
-        if (turn.state === "dispatching")
+        if (["prepared", "dispatching"].includes(turn.state))
           this.store.transition(turnId, "running");
         if (event.type === "text")
           this.store.ingestText(turnId, event.text, event.sourceId);

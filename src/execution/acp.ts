@@ -171,7 +171,18 @@ export class AcpProvider implements ExecutionProvider {
       session!.resolve = resolve;
       session!.reject = reject;
     });
+    let cancellationDeadline: ReturnType<typeof setTimeout> | undefined;
     const abort = () => {
+      cancellationDeadline ??= setTimeout(
+        () =>
+          session!.reject?.(
+            new ControllerError(
+              "cancel_unknown",
+              "Native cancellation is unconfirmed",
+            ),
+          ),
+        10_000,
+      );
       void this.#executor
         .cancelAcpSession(session!.sessionId)
         .catch(() =>
@@ -193,6 +204,7 @@ export class AcpProvider implements ExecutionProvider {
     try {
       context.signal.throwIfAborted();
       const prompt = encodePrompt(context);
+      await context.dispatch();
       await this.#executor.promptAcpSession(
         this.#sink,
         session.sessionId,
@@ -202,6 +214,7 @@ export class AcpProvider implements ExecutionProvider {
       await session.ingest;
     } finally {
       clearTimeout(deadline);
+      clearTimeout(cancellationDeadline);
       context.signal.removeEventListener("abort", abort);
       session.context = undefined;
       session.resolve = undefined;

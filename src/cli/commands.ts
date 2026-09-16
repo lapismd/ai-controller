@@ -115,6 +115,13 @@ export const COMMANDS: CommandSpec[] = [
     required: ["turn"],
   },
   {
+    path: "turns resolve",
+    summary:
+      "Release uncertain work only after verifying the external agent stopped; never retries it.",
+    options: ["turn", "outcome", "stopped"],
+    required: ["turn", "outcome", "stopped"],
+  },
+  {
     path: "turns cancel",
     summary: "Request cancellation; inspect the eventual outcome.",
     options: ["turn"],
@@ -179,6 +186,7 @@ const BOOLEAN_OPTIONS = new Set([
   "watch",
   "follow",
   "private",
+  "stopped",
 ]);
 export function parseArgs(argv: string[]) {
   const options: Record<string, string | boolean> = {};

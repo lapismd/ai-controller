@@ -146,6 +146,12 @@ Inspect execution and output completeness.
 
 Options: `--turn`.
 
+## turns resolve
+
+Release uncertain work only after verifying the external agent stopped; never retries it.
+
+Options: `--turn`, `--outcome`, `--stopped`.
+
 ## turns cancel
 
 Request cancellation; inspect the eventual outcome.

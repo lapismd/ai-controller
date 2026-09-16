@@ -7,12 +7,12 @@ Nostr paths, are required before removing the old execution path.
 
 ## Source baseline
 
-| Repository | Revision | Focused tests |
-| --- | --- | --- |
-| ai-host | 5f963c86756c | 58 passed |
-| lapis-plugins | 4a6b6bf44d19 | 100 passed |
-| nostr-agent-controller | f69ef5e4ae4d | 34 passed |
-| lapis-notes | 17ab470a5495 | Host integration inspected |
+| Repository             | Revision     | Focused tests              |
+| ---------------------- | ------------ | -------------------------- |
+| ai-host                | 5f963c86756c | 58 passed                  |
+| lapis-plugins          | 4a6b6bf44d19 | 100 passed                 |
+| nostr-agent-controller | f69ef5e4ae4d | 34 passed                  |
+| lapis-notes            | 17ab470a5495 | Host integration inspected |
 
 Runtime: Deno 2.9.4, Node 24.10.0, pnpm 10.34.5. Host lock:
 acpx 0.13.0, ACP SDK 1.3.0. SQLite creation/query verified under Deno.
@@ -150,3 +150,19 @@ specification validation, Deno compilation, CLI restart smoke and publint.
 No running application has switched to the service yet. The journal path has
 its own 1,010-event replay/fault fixture, and remote tool cancellation has an
 end-to-end endpoint fixture. Integration deployment is still pending.
+
+## Recovery and attachment hardening
+
+The shared runtime validates the stored application reference, context/tool/memory
+bindings, retention and restricted mode before session reattachment. Provider setup
+now precedes the durable dispatch boundary. A provider interrupt acknowledgement
+alone does not release workspace execution. Native terminal confirmation completes
+cancellation; missing confirmation produces an interrupted state and fences queued
+work, including after restart. Owners can inspect and explicitly resolve uncertain
+turns using `turns resolve --turn ID --outcome failed --stopped` after verifying the
+external agent stopped. This operation records an audit event and never retries the
+original command.
+
+The setup-failure, uncertain-workspace, native-cancellation and attachment regressions
+were reproduced before their fixes. All 57 controller tests, check/boundary validation,
+specification checks, generated CLI reference, build and publint pass.

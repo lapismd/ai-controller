@@ -406,3 +406,56 @@ it("fails restricted and malformed MCP configuration before executing a provider
     await f.close();
   }
 });
+
+it("rejects resumed threads when application scope bindings change", async () => {
+  const f = await fixture(async (c) => {
+    await c.emit({ type: "completed" });
+  });
+  const original = {
+    externalRef: "conversation-a",
+    toolEndpoint: "tools-a",
+    memoryEndpoint: "memory-a",
+    contextSources: ["scope-a"],
+    payloadPolicy: "metadata-only" as const,
+  };
+  let binding: NonNullable<
+    Awaited<
+      ReturnType<
+        NonNullable<import("./runtime.js").ControllerRuntimeOptions["prepare"]>
+      >
+    >["thread"]
+  > = original;
+  const runtime = new ControllerRuntime({
+    id: "test",
+    client: f.client,
+    provider: () => "test",
+    workspace: () => "workspace",
+    prepare: async () => ({ thread: binding }),
+  });
+  try {
+    const first = await runtime.start({ prompt: "" });
+    const id = first.id;
+    await first.close();
+    for (const change of [
+      { externalRef: "conversation-b" },
+      { toolEndpoint: "tools-b" },
+      { memoryEndpoint: "memory-b" },
+      { contextSources: ["scope-b"] },
+      { payloadPolicy: "durable" as const },
+    ]) {
+      binding = { ...original, ...change };
+      const attempt = runtime.resume(id);
+      // Clean up an incorrectly accepted resume so this regression does not leak a subscription.
+      void attempt.then(
+        (session) => session.close(),
+        () => {},
+      );
+      await expect(attempt).rejects.toMatchObject({ code: "binding_mismatch" });
+    }
+    binding = original;
+    const resumed = await runtime.resume(id);
+    await resumed.close();
+  } finally {
+    await f.close();
+  }
+});

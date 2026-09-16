@@ -31,7 +31,10 @@ export interface ControllerRuntimeOptions {
   provider(request: Omit<AgentRequest, "prompt">): string;
   workspace(request: Omit<AgentRequest, "prompt">): string;
   /** Supplies authorized domain endpoints and immutable scope bindings. */
-  prepare?(request: Omit<AgentRequest, "prompt">, threadId: string): Promise<{
+  prepare?(
+    request: Omit<AgentRequest, "prompt">,
+    threadId: string,
+  ): Promise<{
     thread?: Pick<
       ThreadInput,
       | "externalRef"
@@ -176,6 +179,25 @@ export class ControllerRuntime implements AgentRuntime {
         throw new ControllerError(
           "binding_mismatch",
           "Thread belongs to another provider or workspace",
+        );
+      const expectedSources = [
+        ...(prepared?.thread?.contextSources ?? []),
+        contextId,
+      ];
+      if (
+        thread.externalRef !== prepared?.thread?.externalRef ||
+        thread.toolEndpoint !== prepared?.thread?.toolEndpoint ||
+        thread.memoryEndpoint !== prepared?.thread?.memoryEndpoint ||
+        (thread.payloadPolicy ?? "durable") !==
+          (prepared?.thread?.payloadPolicy ?? "durable") ||
+        Boolean(thread.configuration?.restricted) !==
+          Boolean(request.restricted) ||
+        JSON.stringify(thread.contextSources ?? []) !==
+          JSON.stringify(expectedSources)
+      )
+        throw new ControllerError(
+          "binding_mismatch",
+          "Thread belongs to another application scope or retention policy",
         );
       if (!thread.contextSources?.includes(contextId))
         throw new ControllerError(

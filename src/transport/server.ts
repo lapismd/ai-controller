@@ -437,13 +437,23 @@ function dispatch(
       return controller.submit(owner, p as unknown as TurnInput);
     case "turns.get":
     case "context.get":
-    case "turns.cancel": {
+    case "turns.cancel":
+    case "turns.resolve": {
       const turn = store.turn(String(p.turnId));
       if (!turn) throw new ControllerError("not_found", "Turn not found");
       store.authorizeThread(owner, turn.threadId);
       if (method === "turns.cancel") {
         controller.cancel(owner, turn.id);
         return { requested: true };
+      }
+      if (method === "turns.resolve") {
+        controller.resolve(
+          owner,
+          turn.id,
+          p.outcome as "failed" | "cancelled",
+          p.externalStopped === true,
+        );
+        return store.turn(turn.id);
       }
       return method === "context.get"
         ? (store.preparation(turn.id) ?? { unavailable: true })

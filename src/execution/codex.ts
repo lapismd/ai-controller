@@ -3,6 +3,7 @@ import type { ExecutionContext, ExecutionProvider } from "../domain/ports.js";
 import { CodexNativeRuntime } from "./compat/codex-runtime.js";
 import type {
   AgentSession,
+  AgentRuntime,
   AiThinkingLevel,
   UserInputAnswers,
 } from "./compat/types.js";
@@ -33,7 +34,7 @@ export class CodexProvider implements ExecutionProvider {
   readonly #executor: AgentRuntimeExecutor;
   readonly #sink: AgentHostSink;
   readonly #host: ReturnType<typeof executionProcessHost>;
-  readonly #runtime: CodexNativeRuntime;
+  readonly #runtime: Required<Pick<AgentRuntime, "start" | "resume">>;
   readonly #sessions = new Map<
     string,
     {
@@ -51,6 +52,7 @@ export class CodexProvider implements ExecutionProvider {
       id?: string;
       shimCommand?: { command: string; args: string[] };
       executor?: AgentRuntimeExecutor;
+      runtime?: Required<Pick<AgentRuntime, "start" | "resume">>;
     } = {},
   ) {
     this.#executor =
@@ -70,7 +72,7 @@ export class CodexProvider implements ExecutionProvider {
       },
     };
     this.#host = executionProcessHost(this.#executor, this.#sink);
-    this.#runtime = new CodexNativeRuntime(this.#host);
+    this.#runtime = options.runtime ?? new CodexNativeRuntime(this.#host);
   }
   async execute(context: ExecutionContext): Promise<void> {
     const { thread, preparation } = context;
@@ -159,7 +161,14 @@ export class CodexProvider implements ExecutionProvider {
           if (event.type === "text")
             await active.emit({ type: "text", text: event.text });
           else if (event.type === "completed") {
-            await active.emit({ type: "completed" });
+            const result = event.result as
+              { turn?: { status?: string } } | undefined;
+            await active.emit({
+              type: "completed",
+              ...(result?.turn?.status === "interrupted"
+                ? { outcome: "cancelled" as const }
+                : {}),
+            });
             owned.completion?.resolve();
           } else if (event.type === "error") {
             await active.emit({ type: "failed", code: "provider_failed" });
@@ -221,21 +230,26 @@ export class CodexProvider implements ExecutionProvider {
     const completion = new Promise<void>((resolve, reject) => {
       state!.completion = { resolve, reject };
     });
+    let cancellationTimer: ReturnType<typeof setTimeout> | undefined;
     const abort = () => {
-      void state!.session
-        .cancel?.()
-        .finally(() =>
+      // The interrupt RPC is a request, not confirmation that native work stopped.
+      void state!.session.cancel?.().catch(() => {});
+      cancellationTimer = setTimeout(
+        () =>
           state!.completion?.reject(
             new ControllerError(
               "cancel_unconfirmed",
-              "Native turn cancellation requested",
+              "Native cancellation was not confirmed",
             ),
           ),
-        );
+        10_000,
+      );
+      cancellationTimer.unref?.();
     };
     context.signal.addEventListener("abort", abort, { once: true });
     try {
       context.signal.throwIfAborted();
+      await context.dispatch();
       await state.session.send(
         [
           ...preparation.blocks.map((block) => block.content),
@@ -245,6 +259,7 @@ export class CodexProvider implements ExecutionProvider {
       await completion;
     } finally {
       context.signal.removeEventListener("abort", abort);
+      clearTimeout(cancellationTimer);
       state.context = undefined;
       state.completion = undefined;
     }

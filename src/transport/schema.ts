@@ -71,6 +71,14 @@ const schemas: Record<string, object> = {
   ),
   "turns.get": object({ turnId: string }, ["turnId"]),
   "turns.cancel": object({ turnId: string }, ["turnId"]),
+  "turns.resolve": object(
+    {
+      turnId: string,
+      outcome: { enum: ["failed", "cancelled"] },
+      externalStopped: { const: true },
+    },
+    ["turnId", "outcome", "externalStopped"],
+  ),
   "commands.get": object({ commandId: string }, ["commandId"]),
   "events.read": object(
     {

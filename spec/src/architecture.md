@@ -95,3 +95,18 @@ registration so consumers can reconnect the same authorized context endpoint.
 
 CLI compilation stages installed runtime packages in an isolated temporary tree.
 Previous executables and extraction caches never enter the next executable.
+
+Session reattachment validates application reference, context sources, tool and
+memory endpoints, restricted mode and payload policy against the stored thread.
+A mismatched attachment fails before it can submit another turn.
+
+Native cancellation retains the workspace lease until the provider confirms a
+terminal turn or the confirmation deadline expires. An interrupt request alone
+is not proof of completion; an expired confirmation remains interrupted.
+
+Provider setup precedes the persisted dispatch boundary. Setup failures are
+failed turns; a lost outcome after dispatch remains submission-unknown or
+interrupted. Such a turn fences its workspace across restart. An owner may
+resolve it as failed or cancelled only with explicit confirmation that external
+work stopped. Resolution records an audit event and releases queued work without
+retrying the original command. The CLI exposes this through `turns resolve`.

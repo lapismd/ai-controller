@@ -243,6 +243,15 @@ function commandRequest(
       };
     case "turns show":
       return { method: "turns.get", params: { turnId: o.turn } };
+    case "turns resolve":
+      return {
+        method: "turns.resolve",
+        params: {
+          turnId: o.turn,
+          outcome: o.outcome,
+          externalStopped: o.stopped === true,
+        },
+      };
     case "turns cancel":
       return { method: "turns.cancel", params: { turnId: o.turn } };
     case "commands show":

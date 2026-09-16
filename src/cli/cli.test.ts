@@ -157,6 +157,34 @@ it("runs management commands against the authenticated service with machine-read
     expect(
       (await invoke(["tools", "list", "--thread", thread.id])).definitions,
     ).toEqual([]);
+    const uncertain = store.accept(config.credentials[0]!.principal.id, {
+      threadId: thread.id,
+      commandId: "uncertain",
+      text: "once",
+    });
+    store.transition(uncertain.turnId, "dispatching");
+    store.recover();
+    expect(() =>
+      parseArgs([
+        "turns",
+        "resolve",
+        "--turn",
+        uncertain.turnId,
+        "--outcome",
+        "failed",
+      ]),
+    ).toThrow("--stopped");
+    await invoke([
+      "turns",
+      "resolve",
+      "--turn",
+      uncertain.turnId,
+      "--outcome",
+      "failed",
+      "--stopped",
+    ]);
+    expect(store.turn(uncertain.turnId)?.state).toBe("failed");
+    expect(store.turns(thread.id)).toHaveLength(1);
     const snapshot = await invoke(["threads", "show", "--thread", thread.id]);
     expect(
       await invoke([
