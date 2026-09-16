@@ -79,3 +79,25 @@ desktop/web/Storybook attach; migrate Nostr domain adapters and all conversation
 paths; complete management commands; remove old orchestration and host runnable
 entrypoints only after full consumer acceptance. Neither application has switched
 execution ownership at this checkpoint. No service was installed or deployed.
+
+## Memory extraction checkpoint
+
+Shared compatibility implementations now live under `src/memory/lapis` and
+`src/memory/group`. Lapis receives structural database/evidence/record ports;
+group memory receives its existing partitioned SQLite operations and an injected
+embedding worker port. Both profiles share MMR selection while retaining their
+existing score normalization difference. Source data schemas are unchanged.
+
+The Lapis service/scheduler facade passes all 32 original memory tests, all 360
+AI package tests, type checks, build and publint; all 53 AI Storybook interaction
+tests also passed from a fresh runner. Local package installation initially
+produced three nominal App type errors due to divergent API peer graphs. The
+ignored validation hook pins compatible CodeMirror/Mira/TypeScript peer versions;
+the same check now reports zero errors and zero warnings. Tracked ranges remain
+unchanged except the new controller dependency.
+
+The Nostr memory facade passes its 10 original memory tests and the full 134-test
+suite. Deno type checks passed using `artifacts/controller/deno.json`, which
+preserves the existing local import map and links the unpublished controller.
+Normal registry-only consumer installation cannot resolve the new package until
+publication. No registry lockfile entry or integrity has been fabricated.

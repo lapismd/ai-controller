@@ -45,3 +45,14 @@ Applications retain encrypted delivery stores and can rehydrate authorized data.
 The initial storage uses SQLite WAL and FULL synchronous transactions with an
 exclusive service instance lock. Distributed writers and a durable host spool
 are outside the first release. External provider executables remain external.
+
+Lapis memory compatibility is extracted behind structural evidence, database and
+record-store ports. The schema-1 Markdown representation, revision preimages,
+source hashes, exclusions, deterministic promotion rules and maintenance leases
+remain compatible with existing vault data. The application supplies actual
+vault/database access; the shared module never imports App, Vault or UI code.
+
+The group-memory compatibility profile shares ranking policy with the vault
+profile and receives scoped evidence/search/mutation ports. It preserves the
+existing partition and record schema. Embedding workers are injected resources;
+this package does not construct a consumer's worker, relay client or signer.
