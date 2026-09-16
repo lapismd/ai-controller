@@ -89,3 +89,6 @@ execution or providers without MCP support. Only the endpoint identity persists;
 launch environment values are excluded from receipts, preparations, journals and
 CLI diagnostics. A disconnected endpoint fails closed. MCP provider activity is
 observational and never re-invokes an application tool handler.
+
+The runtime preparation port receives the reserved logical thread identity before
+registration so consumers can reconnect the same authorized context endpoint.

@@ -31,7 +31,7 @@ export interface ControllerRuntimeOptions {
   provider(request: Omit<AgentRequest, "prompt">): string;
   workspace(request: Omit<AgentRequest, "prompt">): string;
   /** Supplies authorized domain endpoints and immutable scope bindings. */
-  prepare?(request: Omit<AgentRequest, "prompt">): Promise<{
+  prepare?(request: Omit<AgentRequest, "prompt">, threadId: string): Promise<{
     thread?: Pick<
       ThreadInput,
       | "externalRef"
@@ -113,7 +113,7 @@ export class ControllerRuntime implements AgentRuntime {
     const mcpId = request.mcpServers?.length
       ? `runtime.mcp.${threadId}`
       : undefined;
-    const prepared = await this.options.prepare?.(request);
+    const prepared = await this.options.prepare?.(request, threadId);
     const disposers: Array<() => Promise<void>> = [];
     if (prepared?.dispose) disposers.push(prepared.dispose);
     try {
