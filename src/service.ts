@@ -3,6 +3,7 @@ import {
   createAcpAgentRegistry,
   DEFAULT_ACP_AGENTS,
   parseAcpAgentDefinitions,
+  resolveAcpAgentCommand,
 } from "@lapismd/ai-host";
 import { ControllerError, type Principal } from "./contracts.js";
 import { ControllerStore } from "./persistence/store.js";
@@ -23,14 +24,7 @@ export async function agentRegistry(path?: string) {
     await Promise.all(
       entries.map(async (entry) => ({
         ...entry,
-        command: await externalCommand(
-          entry.command ??
-            (entry.id === "codex"
-              ? ["codex-acp"]
-              : entry.id === "cursor"
-                ? ["cursor-agent", "acp"]
-                : [entry.id]),
-        ),
+        command: await externalCommand(await resolveAcpAgentCommand(entry)),
       })),
     ),
   );

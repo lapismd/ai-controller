@@ -110,3 +110,7 @@ interrupted. Such a turn fences its workspace across restart. An owner may
 resolve it as failed or cancelled only with explicit confirmation that external
 work stopped. Resolution records an audit event and releases queued work without
 retrying the original command. The CLI exposes this through `turns resolve`.
+
+Provider launch defaults come from the installed ai-host/acpx registry. The
+controller resolves external executable paths for Deno without replacing adapter
+selection or requiring additional global agent binaries.
