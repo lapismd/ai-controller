@@ -501,3 +501,168 @@ it("does not invoke application tools for native observed activity", async () =>
   await controller.close();
   store.close();
 });
+
+it("wraps mutating tools with cooperative capture and fails closed when capture is unavailable", async () => {
+  const store = new ControllerStore(":memory:");
+  let executed = 0;
+  const begins: string[] = [];
+  const finishes: string[] = [];
+  const capture = {
+    async begin(input: { toolName: string; captureMode: string }) {
+      begins.push(`${input.captureMode}:${input.toolName}`);
+      return { spanId: "span-1" };
+    },
+    async finish(input: { outcome: string }) {
+      finishes.push(input.outcome);
+    },
+  };
+  const provider: ExecutionProvider = {
+    capabilities,
+    close: async () => {},
+    execute: async (c) => {
+      await c.callTool("write", {});
+      await c.emit({ type: "completed" });
+    },
+  };
+  const controller = new Controller(
+    store,
+    new Map([["fake", provider]]),
+    4,
+    capture,
+  );
+  controller.registerTools("owner", "tools", {
+    definitions: [
+      {
+        name: "write",
+        description: "write",
+        effect: "write",
+        inputSchema: { type: "object" },
+      },
+    ],
+    execute: async () => {
+      executed++;
+      return { content: "ok" };
+    },
+  });
+  const thread = store.createThread("owner", {
+    provider: "fake",
+    workspace: "root",
+    toolEndpoint: "tools",
+  });
+  controller.submit("owner", {
+    threadId: thread.id,
+    commandId: "a",
+    text: "write",
+  });
+  await controller.drain();
+  expect(begins).toEqual(["cooperative:write"]);
+  expect(finishes).toEqual(["succeeded"]);
+  expect(executed).toBe(1);
+  await controller.close();
+  store.close();
+
+  const blocked = new ControllerStore(":memory:");
+  let blockedExec = 0;
+  const failing = new Controller(
+    blocked,
+    new Map([
+      [
+        "fake",
+        {
+          capabilities,
+          close: async () => {},
+          execute: async (c) => {
+            await c.callTool("write", {});
+            await c.emit({ type: "completed" });
+          },
+        },
+      ],
+    ]),
+    4,
+    {
+      begin: async () => {
+        throw new Error("capture down");
+      },
+      finish: async () => {},
+    },
+  );
+  failing.registerTools("owner", "tools", {
+    definitions: [
+      {
+        name: "write",
+        description: "write",
+        effect: "write",
+        inputSchema: { type: "object" },
+      },
+    ],
+    execute: async () => {
+      blockedExec++;
+      return { content: "should not run" };
+    },
+  });
+  const blockedThread = blocked.createThread("owner", {
+    provider: "fake",
+    workspace: "root",
+    toolEndpoint: "tools",
+  });
+  failing.submit("owner", {
+    threadId: blockedThread.id,
+    commandId: "b",
+    text: "write",
+  });
+  await failing.drain();
+  expect(blockedExec).toBe(0);
+  expect(blocked.interactions(blockedThread.id)[0]?.state).toBe("unknown");
+  await failing.close();
+  blocked.close();
+});
+
+it("records observed activity without exclusive capture", async () => {
+  const store = new ControllerStore(":memory:");
+  const observed: unknown[] = [];
+  const begins: string[] = [];
+  const controller = new Controller(
+    store,
+    new Map([
+      [
+        "fake",
+        {
+          capabilities,
+          close: async () => {},
+          execute: async (c) => {
+            await c.emit({
+              type: "activity",
+              data: { type: "tool.start", name: "mcp_search" },
+            });
+            await c.emit({ type: "completed" });
+          },
+        },
+      ],
+    ]),
+    4,
+    {
+      begin: async (input) => {
+        begins.push(input.captureMode);
+        return { spanId: "should-not-run" };
+      },
+      finish: async () => {},
+      observe: async (input) => {
+        observed.push(input.payload);
+      },
+    },
+  );
+  const thread = store.createThread("owner", {
+    provider: "fake",
+    workspace: "root",
+  });
+  controller.submit("owner", {
+    threadId: thread.id,
+    commandId: "observe",
+    text: "look",
+  });
+  await controller.drain();
+  expect(begins).toEqual([]);
+  expect(observed).toEqual([{ type: "tool.start", name: "mcp_search" }]);
+  await controller.close();
+  store.close();
+});

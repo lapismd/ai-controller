@@ -7,6 +7,7 @@ export type {
   ExecutionProvider,
   ExecutionContext,
   ContextSource,
+  ToolCapture,
   ToolEndpoint,
 } from "./domain/ports.js";
 export * from "./contracts.js";

@@ -103,3 +103,29 @@ export interface McpEndpoint {
     signal: AbortSignal,
   ): Promise<McpServerContribution[]>;
 }
+
+export type CaptureMode = "cooperative" | "observed";
+
+export interface ToolCapture {
+  begin(input: {
+    caller: string;
+    requestKey: string;
+    workspaceId: string;
+    captureMode: CaptureMode;
+    intent: string;
+    toolName: string;
+  }): Promise<{ spanId: string }>;
+  finish(input: {
+    caller: string;
+    requestKey: string;
+    workspaceId: string;
+    spanId: string;
+    outcome: "succeeded" | "failed" | "unknown";
+  }): Promise<void>;
+  observe?(input: {
+    caller: string;
+    requestKey: string;
+    workspaceId: string;
+    payload: Json;
+  }): Promise<void>;
+}

@@ -18,6 +18,7 @@ import type {
   ContextSource,
   ExecutionProvider,
   RuntimeEvent,
+  ToolCapture,
   ToolEndpoint,
   MemoryEndpoint,
   McpEndpoint,
@@ -60,13 +61,17 @@ export class Controller {
     { resolve(value: Json): void; reject(error: Error): void }
   >();
   readonly #ajv = new Ajv({ strict: false, allErrors: true });
+  readonly #capture?: ToolCapture;
   #closing = false;
   #scheduled = false;
   constructor(
     readonly store: ControllerStore,
     readonly providers: Map<string, ExecutionProvider>,
     readonly concurrency = 4,
-  ) {}
+    capture?: ToolCapture,
+  ) {
+    this.#capture = capture;
+  }
   start(): void {
     this.store.recover();
     this.schedule();
@@ -576,6 +581,19 @@ export class Controller {
           );
       }
     });
+    if (event.type === "activity" && this.#capture?.observe) {
+      const thread = this.store.thread(turn.threadId);
+      try {
+        await this.#capture.observe({
+          caller: "controller",
+          requestKey: `${turnId}:${event.sourceId ?? "activity"}`,
+          workspaceId: thread?.workspace ?? turn.threadId,
+          payload: event.data,
+        });
+      } catch {
+        // Observed capture must not fail the turn or invoke an application tool.
+      }
+    }
   }
   private async interact(
     thread: Thread,
@@ -664,6 +682,45 @@ export class Controller {
       state: "pending",
     };
     this.store.putInteraction(interaction);
+    const mutating = definition.effect !== "read";
+    let spanId: string | undefined;
+    if (this.#capture) {
+      if (mutating) {
+        try {
+          const span = await this.#capture.begin({
+            caller: "controller",
+            requestKey: interaction.id,
+            workspaceId: thread.workspace,
+            captureMode: "cooperative",
+            intent: "tool",
+            toolName: name,
+          });
+          spanId = span.spanId;
+        } catch (error) {
+          this.store.putInteraction({
+            ...interaction,
+            state: "unknown",
+          });
+          throw error instanceof ControllerError
+            ? error
+            : new ControllerError(
+                "capture_unavailable",
+                "Checkpoint capture is unavailable",
+              );
+        }
+      } else if (this.#capture.observe) {
+        try {
+          await this.#capture.observe({
+            caller: "controller",
+            requestKey: `${interaction.id}:observe`,
+            workspaceId: thread.workspace,
+            payload: { name, input },
+          });
+        } catch {
+          // Read-effect observations stay non-blocking.
+        }
+      }
+    }
     try {
       const result = await bounded(
         endpoint.execute(name, input, {
@@ -685,12 +742,34 @@ export class Controller {
         state: "resolved",
         response: result as unknown as Json,
       });
+      if (spanId && this.#capture) {
+        await this.#capture.finish({
+          caller: "controller",
+          requestKey: `${interaction.id}:finish`,
+          workspaceId: thread.workspace,
+          spanId,
+          outcome: "succeeded",
+        });
+      }
       return result;
     } catch (error) {
       this.store.putInteraction({
         ...interaction,
         state: definition.effect === "read" ? "cancelled" : "unknown",
       });
+      if (spanId && this.#capture) {
+        try {
+          await this.#capture.finish({
+            caller: "controller",
+            requestKey: `${interaction.id}:failed`,
+            workspaceId: thread.workspace,
+            spanId,
+            outcome: "failed",
+          });
+        } catch {
+          // Preserve the original tool or capture error.
+        }
+      }
       throw error;
     }
   }

@@ -10,6 +10,7 @@
 | AIC-CORE-006 | Implemented | src/service.test.ts; src/persistence/store.test.ts; src/runtime.test.ts restricted reattachment |
 | AIC-TOOL-001 | Implemented | src/domain/engine.test.ts; src/transport/server.test.ts |
 | AIC-TOOL-002 | Implemented | src/domain/engine.test.ts; src/execution/compat/app-server-protocol.test.ts |
+| AIC-TOOL-003 | Implemented | src/domain/engine.test.ts wraps mutating tools with cooperative capture, fails closed when begin throws, and records observed activity without exclusive begin |
 | AIC-MEM-001 | Implemented | src/transport/server.test.ts; src/memory/lapis/native-memory-service.test.ts |
 | AIC-MEM-002 | Implemented | src/memory/recall.test.ts; src/transport/server.test.ts |
 | AIC-MEM-003 | Implemented | src/memory/lapis/native-memory-service.test.ts; src/memory/group/service.test.ts |
