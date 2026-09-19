@@ -96,6 +96,7 @@ export class AcpProvider implements ExecutionProvider {
       tools: context.tools,
       mcpServers: context.mcpServers ?? [],
       restricted: preparation.configuration.restricted ?? false,
+      vcsIdentity: preparation.configuration.vcsIdentity,
     });
     if (session && session.manifest !== manifest) {
       await this.#executor.closeAcpSession(session.sessionId);
@@ -131,6 +132,7 @@ export class AcpProvider implements ExecutionProvider {
           agent: this.options.agent,
           workspace,
           restricted: preparation.configuration.restricted,
+          metadata: { vcsIdentity: preparation.configuration.vcsIdentity },
           mcpServers: context.mcpServers,
           ...(session.bridgeId ? { appToolBridgeId: session.bridgeId } : {}),
         });
@@ -302,7 +304,11 @@ export class AcpProvider implements ExecutionProvider {
                 ? normalized.text
                 : String(event.text ?? event.delta ?? ""),
             sourceId,
+            ...(typeof event.messageId === "string" ? { messageId: event.messageId } : {}),
+            ...(event.complete === true ? { complete: true } : {}),
           });
+        else if (type === "message_complete")
+          await context.emit({ type: "activity", data: { type, ...(typeof event.messageId === "string" ? { messageId: event.messageId } : {}) }, sourceId });
         else if (["done", "completed"].includes(type)) {
           await context.emit({
             type: "completed",

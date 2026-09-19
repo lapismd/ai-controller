@@ -6,6 +6,10 @@ const object = (
   required: string[] = [],
 ) => ({ type: "object", additionalProperties: false, properties, required });
 const config = object({
+  vcsIdentity: object({
+    name: { type: "string", minLength: 1, maxLength: 256, pattern: "^[^\\r\\n\\u0000]+$" },
+    email: { type: "string", minLength: 1, maxLength: 320, pattern: "^[^\\r\\n\\u0000]+$" },
+  }, ["name", "email"]),
   restricted: { type: "boolean" },
   model: string,
   agent: string,
@@ -111,6 +115,7 @@ const schemas: Record<string, object> = {
       ]),
       context: { type: "boolean" },
       mcp: { type: "boolean" },
+      capture: { type: "boolean" },
       required: { type: "boolean" },
       tools: {
         type: "array",

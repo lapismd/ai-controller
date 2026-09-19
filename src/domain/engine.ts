@@ -456,6 +456,7 @@ export class Controller {
           "Memory tools are owned by controller preparation",
         );
       const combined: ToolEndpoint = {
+        ...(endpoint?.capture ? { capture: endpoint.capture } : {}),
         definitions: [...(endpoint?.definitions ?? []), ...memoryTools],
         execute: async (name, input, call) => {
           if (memoryTools.some((tool) => tool.name === name))
@@ -570,7 +571,7 @@ export class Controller {
         if (["prepared", "dispatching"].includes(turn.state))
           this.store.transition(turnId, "running");
         if (event.type === "text")
-          this.store.ingestText(turnId, event.text, event.sourceId);
+          this.store.ingestText(turnId, event.text, event.sourceId, event);
         else if (event.type === "activity")
           this.store.append(
             turn.threadId,
@@ -683,11 +684,12 @@ export class Controller {
     };
     this.store.putInteraction(interaction);
     const mutating = definition.effect !== "read";
+    const capture = endpoint.capture?.({ thread, turn, signal }) ?? this.#capture;
     let spanId: string | undefined;
-    if (this.#capture) {
+    if (capture) {
       if (mutating) {
         try {
-          const span = await this.#capture.begin({
+          const span = await capture.begin({
             caller: "controller",
             requestKey: interaction.id,
             workspaceId: thread.workspace,
@@ -708,9 +710,9 @@ export class Controller {
                 "Checkpoint capture is unavailable",
               );
         }
-      } else if (this.#capture.observe) {
+      } else if (capture.observe) {
         try {
-          await this.#capture.observe({
+          await capture.observe({
             caller: "controller",
             requestKey: `${interaction.id}:observe`,
             workspaceId: thread.workspace,
@@ -742,8 +744,8 @@ export class Controller {
         state: "resolved",
         response: result as unknown as Json,
       });
-      if (spanId && this.#capture) {
-        await this.#capture.finish({
+      if (spanId && capture) {
+        await capture.finish({
           caller: "controller",
           requestKey: `${interaction.id}:finish`,
           workspaceId: thread.workspace,
@@ -757,9 +759,9 @@ export class Controller {
         ...interaction,
         state: definition.effect === "read" ? "cancelled" : "unknown",
       });
-      if (spanId && this.#capture) {
+      if (spanId && capture) {
         try {
-          await this.#capture.finish({
+          await capture.finish({
             caller: "controller",
             requestKey: `${interaction.id}:failed`,
             workspaceId: thread.workspace,

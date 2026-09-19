@@ -10,9 +10,11 @@ import {
   type Json,
   type Principal,
   type ThreadInput,
+  type Thread,
   type ToolDefinition,
   type ToolResult,
   type TurnInput,
+  type Turn,
 } from "../contracts.js";
 import { Controller } from "../domain/engine.js";
 import { EndpointRegistry } from "./endpoints.js";
@@ -273,6 +275,16 @@ export async function serveController(
                 disposers.push(
                   controller.registerTools(owner, endpointId, {
                     definitions: input.tools as ToolDefinition[],
+                    ...(input.capture === true ? { capture: (context: { thread: Thread; turn: Turn; signal: AbortSignal }) => ({
+                      begin: async (payload: Parameters<import("../domain/ports.js").ToolCapture["begin"]>[0]) => {
+                        const value = await call("capture.begin", { ...payload, threadId: context.thread.id, turnId: context.turn.id }, context.signal);
+                        if (!value || typeof value !== "object" || Array.isArray(value) || typeof value.spanId !== "string" || !value.spanId)
+                          throw new ControllerError("capture_unavailable", "Capture endpoint omitted its span identity");
+                        return { spanId: value.spanId };
+                      },
+                      finish: async (payload: Parameters<import("../domain/ports.js").ToolCapture["finish"]>[0]) => { await call("capture.finish", { ...payload, threadId: context.thread.id, turnId: context.turn.id }); },
+                      observe: async (payload: Parameters<NonNullable<import("../domain/ports.js").ToolCapture["observe"]>>[0]) => { await call("capture.observe", { ...payload, threadId: context.thread.id, turnId: context.turn.id }, context.signal); },
+                    }) } : {}),
                     execute: async (name, args, context) => {
                       const result = await call(
                         "tool.execute",

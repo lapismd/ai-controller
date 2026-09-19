@@ -203,3 +203,7 @@ Native empty-form MCP elicitations are one-time approval interactions. Forms wit
 fields or URL actions are not treated as approval and receive an unsupported
 request error; the adapter never invents required user input. Unknown server
 requests receive a JSON-RPC error instead of silently leaving a turn waiting.
+
+Provider configuration MAY include a validated non-secret `vcsIdentity` name and email. ACP sessions MUST bind that identity and replace the native session when it changes. Runtime text events MUST preserve optional logical message IDs and completion markers through the output journal; transport frame IDs remain independent.
+
+Authenticated consumer tool endpoints MAY register a generic capture port. Mutating application tools MUST await its begin acknowledgement before execution and its finish after the result. Read observations remain advisory. Endpoint ownership and disconnect fencing apply to capture callbacks; native ACP effects are observed through the journal and MUST NOT be replayed.

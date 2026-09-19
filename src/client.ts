@@ -19,6 +19,7 @@ export interface EndpointRegistration {
   mcp?: boolean;
   required?: boolean;
   tools?: ToolDefinition[];
+  capture?: boolean;
   memory?: { profile: "lapis-v1" | "nostr-v1" };
   handle(request: EndpointRequest, signal: AbortSignal): Promise<Json>;
 }

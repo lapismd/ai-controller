@@ -23,6 +23,7 @@ export const TERMINAL_STATES: readonly TurnState[] = [
   "interrupted",
 ];
 export type ProviderConfig = {
+  vcsIdentity?: { name: string; email: string };
   restricted?: boolean;
   model?: string;
   thinking?: string;

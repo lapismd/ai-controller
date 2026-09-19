@@ -483,7 +483,7 @@ export class ControllerStore {
     this.#pendingEvents.push(event);
     return event;
   }
-  ingestText(turnId: string, text: string, sourceId?: string): void {
+  ingestText(turnId: string, text: string, sourceId?: string, boundary?: { messageId?: string; complete?: boolean }): void {
     this.transaction(() => {
       const turn = this.turn(turnId)!;
       if (isTerminal(turn.state)) return;
@@ -495,7 +495,7 @@ export class ControllerStore {
       const event = this.append(
         turn.threadId,
         "output.text",
-        { text },
+        { text, ...(boundary?.messageId ? { messageId: boundary.messageId } : {}), ...(boundary?.complete ? { complete: true } : {}) },
         turnId,
         sourceId,
       );

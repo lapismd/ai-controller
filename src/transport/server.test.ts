@@ -92,9 +92,9 @@ describe("shared remote client", () => {
       store.close();
     }
   });
-  it("executes application tools over an authenticated endpoint", async () => {
+  it.each(["read", "write"] as const)("executes %s tools with authenticated consumer capture", async (effect) => {
     const store = new ControllerStore(":memory:");
-    let called = "";
+    const called: string[] = [];
     const controller = new Controller(
       store,
       new Map([
@@ -132,16 +132,19 @@ describe("shared remote client", () => {
     try {
       const unregister = await client.registerEndpoint({
         id: "app",
+        capture: true,
         tools: [
           {
             name: "read",
             description: "Read",
             inputSchema: { type: "object" },
-            effect: "read",
+            effect,
           },
         ],
         handle: async (request) => {
-          called = request.operation;
+          called.push(request.operation);
+          if (request.operation === "capture.begin") return { spanId: "captured" };
+          if (request.operation.startsWith("capture.")) return null;
           return { content: "domain-data" };
         },
       });
@@ -156,7 +159,7 @@ describe("shared remote client", () => {
         text: "hello",
       });
       await controller.drain();
-      expect(called).toBe("tool.execute");
+      expect(called).toEqual(effect === "write" ? ["capture.begin", "tool.execute", "capture.finish"] : ["capture.observe", "tool.execute"]);
       expect((await client.getTurn(receipt.turnId)).output).toBe("domain-data");
       await unregister();
       const revoked = await client.submit({

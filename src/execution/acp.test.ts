@@ -8,12 +8,14 @@ describe("ACP library execution", () => {
   it("records events emitted before prompt acknowledgement and reuses a thread session", async () => {
     let starts = 0;
     let sequence = 0;
+    const identities: unknown[] = [];
     const executor = {
       startAcpSession: async (
         _sink: AgentHostSink,
-        payload: { sessionId: string },
+        payload: { sessionId: string; metadata?: { vcsIdentity?: unknown } },
       ) => {
         starts++;
+        identities.push(payload.metadata?.vcsIdentity);
         return { sessionId: payload.sessionId };
       },
       promptAcpSession: async (
@@ -43,6 +45,7 @@ describe("ACP library execution", () => {
     const thread = store.createThread("owner", {
       provider: "codex",
       workspace: "vault",
+      configuration: { vcsIdentity: { name: "Nyra", email: "nyra@nostr.invalid" } },
     });
     controller.submit("owner", {
       threadId: thread.id,
@@ -56,6 +59,7 @@ describe("ACP library execution", () => {
     });
     await controller.drain();
     expect(starts).toBe(1);
+    expect(identities).toEqual([{ name: "Nyra", email: "nyra@nostr.invalid" }]);
     expect(store.turns().map((turn) => [turn.state, turn.output])).toEqual([
       ["completed", "first"],
       ["completed", "second"],

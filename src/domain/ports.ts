@@ -12,7 +12,7 @@ import type {
 import type { MemoryCandidate, MemoryProfile } from "../memory/recall.js";
 
 export type RuntimeEvent =
-  | { type: "text"; text: string; sourceId?: string }
+  | { type: "text"; text: string; sourceId?: string; messageId?: string; complete?: boolean }
   | { type: "activity"; data: Json; sourceId?: string }
   | {
       type: "approval" | "input";
@@ -65,6 +65,7 @@ export interface ContextSource {
   ): Promise<boolean>;
 }
 export interface ToolEndpoint {
+  capture?(context: { thread: Thread; turn: Turn; signal: AbortSignal }): ToolCapture;
   definitions: ToolDefinition[];
   execute(
     name: string,
