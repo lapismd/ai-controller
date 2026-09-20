@@ -170,7 +170,7 @@ export async function serveController(
                 endpointId,
                 operation,
                 payload,
-                operation === "tool.execute" ? 120_000 : 5000,
+                operation === "tool.execute" || operation.startsWith("transcript.") ? 120_000 : 5000,
                 signal,
               );
             try {

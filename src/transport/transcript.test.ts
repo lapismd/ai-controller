@@ -24,6 +24,7 @@ it("requires an authorized durable acknowledgment before dispatch and supports o
     await client.registerEndpoint({ id: "encrypted-owner-journal", transcript: true, handle: async call => {
       const payload = call.payload as Record<string, Json>;
       if (call.operation === "transcript.append") {
+        expect(call.deadline - Date.now()).toBeGreaterThan(100_000);
         const event = payload.event as unknown as TranscriptEvent;
         pending++;
         await gate;

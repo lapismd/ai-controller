@@ -27,7 +27,7 @@
 | AIC-CAP-001 | Implemented | src/persistence/sanitization.test.ts inspects first SQL bindings; src/memory/group/capture-store.test.ts checks index ingress/replay |
 | AIC-CAP-002 | Implemented | src/capture/session.test.ts; typed records and preserved completed native observations; unexposed ACP hooks remain explicitly excluded |
 | AIC-CAP-003 | Implemented | src/capture/session.test.ts whole logical messages, thinking, immediate fixed status and interruption gaps |
-| AIC-CAP-004 | Implemented | src/transport/transcript.test.ts owner authorization, durable acknowledgment before execution and metadata-only replay |
+| AIC-CAP-004 | Implemented | src/transport/transcript.test.ts owner authorization, durable acknowledgment before execution, remote encrypted-journal deadline and metadata-only replay |
 | AIC-CAP-005 | Implemented | src/persistence/sanitization.test.ts raw tool execution and sanitized model results; existing unknown-outcome recovery tests |
 | AIC-CAP-006 | Implemented | Group capture-store and Lapis native-memory-service tests cover first index writes and legacy reads; execution location capabilities remain separate |
 | AIC-CAP-007 | Implemented | Managed stderr buffers complete EOF with bounded scan; local compiled binary starts its isolated scanner and persists a policy-bearing thread |

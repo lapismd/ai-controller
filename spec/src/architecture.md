@@ -1,5 +1,9 @@
 # Architecture
 
+Consumer transcript append and replay allow up to 120 seconds for encrypted
+durable storage. Cancellation and disconnect still invalidate the endpoint call;
+an expired append never authorizes provider or tool execution.
+
 Canonical message, tool, interaction, checkpoint and parent/child references
 are required identities. If scanning changes one, capture emits an omission
 instead of retaining a misleading association.
