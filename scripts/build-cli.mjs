@@ -2,6 +2,7 @@ import { cp, mkdtemp, readFile, rm, writeFile, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 const require = createRequire(import.meta.url);
 const stage = await mkdtemp(join(tmpdir(), "lapis-ai-controller-build-"));
@@ -20,7 +21,7 @@ try {
     ).version,
   };
   for (const name of Object.keys(manifest.dependencies)) {
-    let directory = dirname(require.resolve(name));
+    let directory = dirname(fileURLToPath(import.meta.resolve(name)));
     while (true) {
       try {
         const installed = JSON.parse(
@@ -33,7 +34,7 @@ try {
           await mkdir(archiveDir, { recursive: true });
           run(
             "npm",
-            ["pack", "--ignore-scripts", "--pack-destination", archiveDir],
+            ["pack", "--quiet", "--ignore-scripts", "--pack-destination", archiveDir],
             directory,
           );
           const { readdir } = await import("node:fs/promises");

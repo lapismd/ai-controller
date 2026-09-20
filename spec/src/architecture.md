@@ -225,3 +225,5 @@ provider traffic and native agent journals remain outside managed coverage.
 The new agent-redaction package is initially validated through an explicitly
 documented local package archive. Publishing it and upgrading registry lockfiles
 remain separate operator gates; publishable manifests keep semver dependencies.
+
+Compiled staging resolves ESM-only dependencies through public import exports and explicitly includes the isolated scanner worker modules.
