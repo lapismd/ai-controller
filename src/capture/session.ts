@@ -20,7 +20,7 @@ export class CaptureSession {
   }
   record(payload: TranscriptPayload, projection?: RuntimeEvent): Captured {
     let sanitized;
-    try { sanitized = this.boundary.scan(payload); }
+    try { sanitized = this.boundary.scan(payload, true); }
     catch { sanitized = this.boundary.scan<TranscriptPayload>({ kind: "omission", reason: "capture_rejected" }); projection = undefined; }
     const sequence = this.allocateSequence?.() ?? ++this.#sequence;
     const event: TranscriptEvent = {

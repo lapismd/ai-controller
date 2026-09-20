@@ -2,12 +2,16 @@ import { SynchronousRedaction } from "@lapismd/agent-redaction/node";
 import type { Policy, SanitizationSummary, LogicalPath } from "@lapismd/agent-redaction";
 import { ControllerError } from "../contracts.js";
 
-const identifiers = ["id", "threadId", "turnId", "commandId", "attemptId", "owner", "application", "workspace", "provider", "nativeId", "nativeSessionId", "externalRef", "sourceId"];
+const identifiers = ["id", "threadId", "sessionId", "turnId", "commandId", "attemptId", "owner", "application", "workspace", "provider", "nativeId", "nativeSessionId", "externalRef", "sourceId", "messageId", "blockId", "invocationId", "interactionId", "checkpointId", "childSessionId", "parentSessionId", "initiatingToolId", "coveredEventIds", "commitIds", "changeIds"];
 /** Plain internal DTO projection: omit optional undefined fields without serializers. */
 function dto(value: unknown, depth = 0): unknown {
   if (depth > 32) throw new ControllerError("capture_rejected", "Capture payload rejected");
   if (!value || typeof value !== "object") return value;
-  if (Array.isArray(value)) return value.map(item => dto(item, depth + 1));
+  if (Array.isArray(value)) return Array.from({ length: value.length }, (_, index) => {
+    const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+    if (!descriptor || !("value" in descriptor)) throw new ControllerError("capture_rejected", "Capture payload rejected");
+    return dto(descriptor.value, depth + 1);
+  });
   if (![Object.prototype, null].includes(Object.getPrototypeOf(value))) throw new ControllerError("capture_rejected", "Capture payload rejected");
   const output: Record<string, unknown> = Object.create(null);
   for (const [key, descriptor] of Object.entries(Object.getOwnPropertyDescriptors(value))) {
@@ -28,7 +32,7 @@ export class CaptureBoundary {
     if (result.status === "omitted") throw new ControllerError("capture_rejected", `Capture omitted: ${result.reason}`);
     if (protectIdentifiers && input && typeof input === "object" && !Array.isArray(input)) {
       const before = input as Record<string, unknown>, after = result.value as Record<string, unknown>;
-      for (const key of identifiers) if (typeof before[key] === "string" && before[key] !== after[key]) throw new ControllerError("capture_identity_redacted", "Required capture identity was rejected");
+      for (const key of identifiers) if (before[key] !== undefined && JSON.stringify(before[key]) !== JSON.stringify(after[key])) throw new ControllerError("capture_identity_redacted", "Required capture identity was rejected");
     }
     return { value: result.value as T, summary: result.summary };
   }

@@ -1,5 +1,9 @@
 # Architecture
 
+Canonical message, tool, interaction, checkpoint and parent/child references
+are required identities. If scanning changes one, capture emits an omission
+instead of retaining a misleading association.
+
 The controller is a separate single-writer service. Applications connect through
 the shared SDK and supply authorized tools, context, evidence and storage ports.
 The execution library remains `ai-host`. No core module imports a consuming app.
