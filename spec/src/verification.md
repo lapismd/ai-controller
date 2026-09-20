@@ -29,5 +29,5 @@
 | AIC-CAP-003 | Implemented | src/capture/session.test.ts whole logical messages, thinking, immediate fixed status and interruption gaps |
 | AIC-CAP-004 | Implemented | src/transport/transcript.test.ts owner authorization, durable acknowledgment before execution and metadata-only replay |
 | AIC-CAP-005 | Implemented | src/persistence/sanitization.test.ts raw tool execution and sanitized model results; existing unknown-outcome recovery tests |
-| AIC-CAP-006 | Planned | Group memory ingress/replay enforced; browser Lapis memory adapter migration remains to complete |
-| AIC-CAP-007 | Planned | Managed stderr buffers complete EOF with bounded scan; compiled runtime acceptance pending |
+| AIC-CAP-006 | Implemented | Group capture-store and Lapis native-memory-service tests cover first index writes and legacy reads; execution location capabilities remain separate |
+| AIC-CAP-007 | Implemented | Managed stderr buffers complete EOF with bounded scan; local compiled binary starts its isolated scanner and persists a policy-bearing thread |

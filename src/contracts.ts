@@ -238,3 +238,5 @@ export function requiredString(
 export function isTerminal(state: TurnState): boolean {
   return TERMINAL_STATES.includes(state);
 }
+
+export { assertTranscript } from "./capture/validation.js";

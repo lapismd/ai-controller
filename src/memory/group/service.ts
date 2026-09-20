@@ -974,6 +974,7 @@ function normalizeClaim(value: string): string {
 }
 
 function secretBearingReason(value: string): string | undefined {
+  if (/\[(?:REDACTED|Capture omitted|EXTERNAL_PATH)\]/i.test(value)) return "sanitized omission";
   const patterns: Array<[RegExp, string]> = [
     [/\bnsec1[023456789acdefghjklmnpqrstuvwxyz]{20,}\b/iu, "nostr private key"],
     [

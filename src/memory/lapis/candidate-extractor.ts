@@ -16,6 +16,7 @@ import { conversationMemoryScope } from "./paths.js";
 import type { DurableMemoryKind, MemoryOriginClass } from "./types.js";
 
 const SECRET_PATTERNS = [
+  /\[(?:REDACTED|EXTERNAL_PATH|Capture omitted)\]/iu,
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/iu,
   /\b(?:api[_ -]?key|password|passwd|secret|access[_ -]?token)\s*[:=]\s*\S+/iu,
   /\b(?:sk|ghp|github_pat|xox[baprs])[-_][A-Za-z0-9_-]{16,}\b/u,

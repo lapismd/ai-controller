@@ -1,3 +1,4 @@
+import { MemoryCaptureBoundary, type MemoryCapture } from "./capture-port.js";
 import {
   selectMmr as selectMemoryMmr,
   automaticRecallQuery,
@@ -94,6 +95,7 @@ type RankedEpisode = {
 };
 
 export type NativeMemoryServiceOptions = {
+  capture?: MemoryCapture;
   now?: () => Date;
   yieldToApp?: () => Promise<void>;
   recordStore?: MemoryRecordStore;
@@ -113,11 +115,14 @@ export class NativeMemoryService implements MemoryService {
     private readonly database: MemoryDatabase,
     options: NativeMemoryServiceOptions = {},
   ) {
+    const boundary = new MemoryCaptureBoundary(options.capture);
+    this.repository = boundary.port(repository, true);
+    this.database = boundary.port(database);
     this.#now = options.now ?? (() => new Date());
     this.#yieldToApp =
       options.yieldToApp ??
       (() => new Promise((resolve) => setTimeout(resolve, 0)));
-    this.#recordStore = options.recordStore ?? new InMemoryMemoryRecordStore();
+    this.#recordStore = boundary.port(options.recordStore ?? new InMemoryMemoryRecordStore());
     this.#consolidationProvider = options.consolidationProvider;
   }
 

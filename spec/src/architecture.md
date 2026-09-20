@@ -227,3 +227,13 @@ documented local package archive. Publishing it and upgrading registry lockfiles
 remain separate operator gates; publishable manifests keep semver dependencies.
 
 Compiled staging resolves ESM-only dependencies through public import exports and explicitly includes the isolated scanner worker modules.
+
+Derived memory candidates containing reserved redaction or omission markers are rejected rather than promoted as factual memories.
+
+The public contracts export `assertTranscript` for consumer-owned encrypted persistence; validation is shared without exposing storage internals.
+
+Lapis memory ports scan DTOs before indexing and durable writes and scan legacy
+reads before derivation. Browser defaults expose portable detector coverage;
+consumers can inject an explicit enforcement adapter. Raw authorized evidence
+read arguments stay in the execution path. Transformed evidence locations fail
+closed instead of becoming file capabilities. Redacted candidates are rejected.
