@@ -22,10 +22,10 @@ const schemas: Record<string, object> = {
   "providers.list": object({}),
   "interactions.list": object({ threadId: string }, ["threadId"]),
   "tools.list": object({ threadId: string }, ["threadId"]),
-  "providers.models": object({ provider: string, workspace: string }, [
-    "provider",
-    "workspace",
-  ]),
+  "providers.models": object(
+    { provider: string, workspace: string, sessionId: string },
+    ["provider", "workspace"],
+  ),
   "threads.configure": object(
     {
       threadId: string,

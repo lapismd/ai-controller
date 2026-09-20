@@ -74,10 +74,11 @@ export class AcpProvider implements ExecutionProvider {
   listAgents() {
     return this.#executor.listAcpAgents();
   }
-  models(workspace: string, agent = this.options.agent) {
+  models(workspace: string, options?: { sessionId?: string; agent?: string }) {
     return this.#executor.listAcpModels(this.#sink, {
-      agent,
+      agent: options?.agent ?? this.options.agent,
       workspace: this.workspace(workspace),
+      ...(options?.sessionId ? { sessionId: options.sessionId } : {}),
     });
   }
   async execute(context: ExecutionContext): Promise<void> {

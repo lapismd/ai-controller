@@ -472,7 +472,12 @@ function dispatch(
           "unsupported_discovery",
           "Provider does not support model discovery",
         );
-      return provider.models(String(p.workspace));
+      return provider.models(
+        String(p.workspace),
+        typeof p.sessionId === "string" && p.sessionId.trim()
+          ? { sessionId: p.sessionId.trim() }
+          : undefined,
+      );
     }
     case "system.status":
       return {

@@ -673,4 +673,75 @@ describe("session authorization", () => {
       store.close();
     }
   });
+
+  it("forwards optional providers.models sessionId to the provider", async () => {
+    const seen: Array<{ workspace: string; options?: { sessionId?: string } }> =
+      [];
+    const store = new ControllerStore(":memory:");
+    const controller = new Controller(
+      store,
+      new Map([
+        [
+          "codex",
+          {
+            capabilities: {
+              driver: "acp",
+              content: ["text" as const],
+              configuration: false,
+              resume: "none" as const,
+              approvals: false,
+              input: false,
+              tools: false,
+            },
+            models: async (
+              workspace: string,
+              options?: { sessionId?: string },
+            ) => {
+              seen.push({ workspace, options });
+              return { agent: "codex", models: ["gpt-6"] };
+            },
+            close: async () => {},
+            execute: async () => {},
+          },
+        ],
+      ]),
+    );
+    const server = await serveController(controller, {
+      credentials: [
+        {
+          token,
+          principal: {
+            id: "owner",
+            providers: ["codex"],
+            workspaces: ["root"],
+          },
+        },
+      ],
+    });
+    const client = new ControllerClient({ url: server.url, token });
+    try {
+      await expect(
+        client.request("providers.models", {
+          provider: "codex",
+          workspace: "root",
+        }),
+      ).resolves.toEqual({ agent: "codex", models: ["gpt-6"] });
+      await expect(
+        client.request("providers.models", {
+          provider: "codex",
+          workspace: "root",
+          sessionId: "persisted-session",
+        }),
+      ).resolves.toEqual({ agent: "codex", models: ["gpt-6"] });
+      expect(seen).toEqual([
+        { workspace: "root", options: undefined },
+        { workspace: "root", options: { sessionId: "persisted-session" } },
+      ]);
+    } finally {
+      client.dispose();
+      await server.close();
+      await controller.close();
+      store.close();
+    }
+  });
 });

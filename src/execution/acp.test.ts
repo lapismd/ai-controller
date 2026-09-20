@@ -67,4 +67,35 @@ describe("ACP library execution", () => {
     await controller.close();
     store.close();
   });
+
+  it("forwards sessionId from model discovery to listAcpModels", async () => {
+    const listed: unknown[] = [];
+    const executor = {
+      listAcpModels: async (
+        _sink: AgentHostSink,
+        payload: { agent?: string; workspace?: string; sessionId?: string },
+      ) => {
+        listed.push(payload);
+        return { agent: "codex", models: ["gpt-6"], entries: [], configOptions: [] };
+      },
+      close: async () => {},
+    } as unknown as AgentRuntimeExecutor;
+    const provider = new AcpProvider({
+      id: "codex",
+      agent: "codex",
+      workspaces: { vault: "/tmp/fixture" },
+      executor,
+    });
+    await expect(
+      provider.models("vault", { sessionId: "persisted-session" }),
+    ).resolves.toMatchObject({ models: ["gpt-6"] });
+    expect(listed).toEqual([
+      {
+        agent: "codex",
+        workspace: "/tmp/fixture",
+        sessionId: "persisted-session",
+      },
+    ]);
+    await provider.close();
+  });
 });
