@@ -270,6 +270,9 @@ export class CodexNativeSession implements AgentSession {
       return;
     }
     const event = mapCodexNotification(parsed);
+    // Completed structured observations survive presentation mapping. Raw deltas
+    // have no safe publication boundary and remain in their logical text buffer.
+    if (!/delta|chunk/i.test(parsed.method ?? "")) this.#events.push({ type: "provider_extension", sourceType: parsed.method ?? "unknown", observation: parsed.params ?? {} });
     if (!event) return;
     if (event.type === "completed" || event.type === "error") {
       this.#activeTurnId = null;

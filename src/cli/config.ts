@@ -10,6 +10,7 @@ export interface ServiceConfig {
   port: number;
   database: string;
   agentConfig?: string;
+  redaction?: { environment?: string[]; dotenvFiles?: string[] };
   workspaces: Record<string, string>;
   providers: Array<{
     id: string;
@@ -67,6 +68,10 @@ export function validateConfig(content: unknown): ServiceConfig {
       "Configuration is invalid",
     );
   const ids = new Set<string>();
+  if (config.redaction && (
+    (config.redaction.environment !== undefined && (!Array.isArray(config.redaction.environment) || config.redaction.environment.length > 1024 || config.redaction.environment.some(name => typeof name !== "string" || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)))) ||
+    (config.redaction.dotenvFiles !== undefined && (!Array.isArray(config.redaction.dotenvFiles) || config.redaction.dotenvFiles.length > 128 || config.redaction.dotenvFiles.some(path => typeof path !== "string" || !isAbsolute(path))))
+  )) throw new ControllerError("configuration_invalid", "Redaction grants are invalid");
   for (const provider of config.providers) {
     if (
       !/^[a-z0-9][a-z0-9._-]{0,63}$/.test(provider.id) ||

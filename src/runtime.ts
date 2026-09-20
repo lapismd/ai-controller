@@ -41,6 +41,7 @@ export interface ControllerRuntimeOptions {
       | "payloadPolicy"
       | "toolEndpoint"
       | "memoryEndpoint"
+      | "transcriptEndpoint"
       | "contextSources"
     >;
     endpoints?: EndpointRegistration[];
@@ -188,6 +189,7 @@ export class ControllerRuntime implements AgentRuntime {
         thread.externalRef !== prepared?.thread?.externalRef ||
         thread.toolEndpoint !== prepared?.thread?.toolEndpoint ||
         thread.memoryEndpoint !== prepared?.thread?.memoryEndpoint ||
+        thread.transcriptEndpoint !== prepared?.thread?.transcriptEndpoint ||
         (thread.payloadPolicy ?? "durable") !==
           (prepared?.thread?.payloadPolicy ?? "durable") ||
         Boolean(thread.configuration?.restricted) !==

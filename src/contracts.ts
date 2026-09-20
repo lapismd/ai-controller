@@ -1,4 +1,5 @@
 /** Browser-safe, versioned controller contracts. No server or consumer imports. */
+export type { TranscriptEvent, TranscriptPayload, TranscriptAcknowledgment, TranscriptPage, CaptureCoverage, LogicalPath, SanitizationSummary } from "./transcript-contracts.js";
 export const PROTOCOL = "lapis-ai-controller/1";
 export type Json =
   null | boolean | number | string | Json[] | { [key: string]: Json };
@@ -41,6 +42,7 @@ export interface ThreadInput {
   toolEndpoint?: string;
   memoryEndpoint?: string;
   mcpEndpoint?: string;
+  transcriptEndpoint?: string;
 }
 export interface Thread extends ThreadInput {
   id: string;
@@ -50,6 +52,7 @@ export interface Thread extends ThreadInput {
   version: number;
   createdAt: number;
   nativeSessionId?: string;
+  capturePolicy?: string;
 }
 export interface ContentPart {
   type: "text" | "resource" | "image";

@@ -159,7 +159,7 @@ export class CodexProvider implements ExecutionProvider {
           const active = owned.context;
           if (!active) continue;
           if (event.type === "text")
-            await active.emit({ type: "text", text: event.text });
+            await active.emit({ type: "text", text: event.text, messageId: event.messageId, complete: event.complete });
           else if (event.type === "completed") {
             const result = event.result as
               { turn?: { status?: string } } | undefined;

@@ -4,6 +4,7 @@ import { createInterface } from "node:readline";
 import { finished } from "node:stream/promises";
 import type { Writable } from "node:stream";
 import { ControllerError } from "./contracts.js";
+import { SynchronousRedaction } from "@lapismd/agent-redaction/node";
 
 export interface ManagedControllerOptions {
   workspace: string;
@@ -15,6 +16,7 @@ export interface ManagedControllerOptions {
   env: NodeJS.ProcessEnv;
   executable?: { command: string; argsPrefix?: string[] };
   readyTimeoutMs?: number;
+  redaction?: { environment?: string[]; dotenvFiles?: string[] };
   onLog?(line: string): void;
 }
 export interface ManagedStartRequest {
@@ -25,11 +27,13 @@ export interface ManagedStartRequest {
   agentConfig?: string;
   bind: "127.0.0.1" | "::1";
   port: number;
+  redaction?: { environment?: string[]; dotenvFiles?: string[] };
 }
 export interface ManagedReady {
   schema: "lapis-ai-controller.ready/1";
   url: string;
   workspace: "default";
+  capturePolicy?: string;
 }
 /** Supervises the separate Deno executable. No execution engine is embedded here. */
 export class ManagedControllerProcess {
@@ -49,9 +53,22 @@ export class ManagedControllerProcess {
     );
     const lines = createInterface({ input: child.stdout });
     child.stderr.setEncoding("utf8");
-    child.stderr.on("data", (chunk: string) =>
-      options.onLog?.(chunk.replaceAll(token, "[redacted]").trim()),
-    );
+    const diagnostics = new SynchronousRedaction({ secrets: [token], roots: [{ kind: "workspace", id: "default", path: options.workspace }] });
+    let stderr = "", diagnosticBytes = 0, diagnosticOverflow = false;
+    child.stderr.on("data", (chunk: string) => {
+      diagnosticBytes += Buffer.byteLength(chunk);
+      if (diagnosticBytes > 2 * 1024 * 1024) { stderr = ""; diagnosticOverflow = true; }
+      else if (!diagnosticOverflow) stderr += chunk;
+    });
+    child.stderr.once("end", () => {
+      try {
+        if (diagnosticOverflow) options.onLog?.("Controller diagnostic output omitted: limit_exceeded");
+        else if (stderr) {
+          const result = diagnostics.text(stderr);
+          options.onLog?.(result.status === "sanitized" ? result.value : "Controller diagnostic output omitted: scan_failed");
+        }
+      } finally { stderr = ""; diagnostics.dispose(); }
+    });
     let timer: ReturnType<typeof setTimeout> | undefined;
     let onError!: (error: Error) => void;
     const ready = Promise.race([
@@ -101,6 +118,7 @@ export class ManagedControllerProcess {
           token,
           workspace: options.workspace,
           database: options.database,
+          ...(options.redaction ? { redaction: options.redaction } : {}),
           ...(options.agentConfig ? { agentConfig: options.agentConfig } : {}),
           bind: options.bind ?? "127.0.0.1",
           port: options.port ?? 0,

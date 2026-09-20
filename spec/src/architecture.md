@@ -27,6 +27,13 @@ Endpoint disposal revokes tools, context and memory registrations immediately.
 | AIC-CORE-004 | Snapshots and replay MUST have an atomic cursor boundary. Runtime output MUST commit before subscriber publication and ingestion acknowledgement.                                                                            |
 | AIC-CORE-005 | Private payload policy MUST apply to commands, preparation, events and interactions. Metadata-only threads MUST NOT persist plaintext input, output, context, tool payloads or diagnostic exceptions.                        |
 | AIC-CORE-006 | Configuration MUST isolate provider instances and workspaces. Native session replacement and unsupported capabilities MUST be explicit.                                                                                      |
+| AIC-CAP-001 | All durable payloads, preparations, interactions, command digests and replay projections MUST pass the configured agent-redaction policy before a first write or export. Native execution inputs MUST remain separate from sanitized model/capture copies. Scanner failure MUST reject input or record an omission, never a raw fallback. |
+| AIC-CAP-002 | Observable transcripts MUST use versioned typed events with stable logical identity, ordered sequence, session/turn/attempt/source identity, coverage and sanitization metadata. Messages, visible thinking, plans, tools, file operations, commands, permissions, input, lifecycle, errors, cancellation, checkpoints, compaction and observable subagents MUST retain their exposed structure. Unsupported opaque observations MUST produce explicit omissions. |
+| AIC-CAP-003 | Streamed text and visible thinking MUST remain bounded volatile logical blocks until completion and scanning. Immediate working/tool indicators MUST contain only safe status. Cancellation or crash MUST discard unfinished buffers and retain an explicit gap. Transport chunk identity MUST NOT become logical message identity. |
+| AIC-CAP-004 | A consumer transcript endpoint MUST authorize owner/application/thread access, support idempotent append and replay, and acknowledge durable capture before subscriber delivery. Metadata-only mode MUST retain no plaintext transcript locally and MUST identify unavailable external history rather than invent recovery. |
+| AIC-CAP-005 | Controller-dispatched tools MUST persist sanitized intent before raw authorized execution and persist sanitized results before provider delivery. Capture failure after effects MUST record outcome/omission and MUST NOT rerun effects. Tool results MUST reference their invocation. |
+| AIC-CAP-006 | Replay, summaries, memory indexes and provider-bound context MUST be sanitized derived views. Legacy rows MUST be labelled legacy and re-sanitized before export, without silently rewriting history. Incompatible native sessions MUST require a fresh context handoff. |
+| AIC-CAP-007 | Managed stderr and top-level diagnostics MUST emit scanned complete records or fixed payload-free omissions. No timed partial flush or raw exception fallback is permitted. Nostr signing credentials MUST never enter shared-controller secret matching. |
 | AIC-TOOL-001 | Tool invocation identity, execution outcome and result delivery MUST be distinct. Non-idempotent unknown outcomes MUST NOT be redispatched automatically.                                                                    |
 | AIC-TOOL-002 | Native observed tool activity MUST NOT invoke an application handler. Approval and structured input MUST use distinct typed interactions, authority and liveness checks.                                                     |
 | AIC-TOOL-003 | When a `ToolCapture` port is configured, mutating `callTool` invocations MUST begin a cooperative span before `endpoint.execute` and finish it after. Capture unavailability MUST fail closed and MUST NOT execute the tool. Stream-only activity MUST use optional `observe` without an exclusive lease and MUST NOT fail the turn. The published controller MUST NOT depend on `jj-checkpoint`. |
@@ -207,3 +214,14 @@ requests receive a JSON-RPC error instead of silently leaving a turn waiting.
 Provider configuration MAY include a validated non-secret `vcsIdentity` name and email. ACP sessions MUST bind that identity and replace the native session when it changes. Runtime text events MUST preserve optional logical message IDs and completion markers through the output journal; transport frame IDs remain independent.
 
 Authenticated consumer tool endpoints MAY register a generic capture port. Mutating application tools MUST await its begin acknowledgement before execution and its finish after the result. Read observations remain advisory. Endpoint ownership and disconnect fencing apply to capture callbacks; native ACP effects are observed through the journal and MUST NOT be replayed.
+
+The redaction adapter runs pinned credential detectors in an isolated worker.
+Synchronous SQLite writes use the same policy through a bounded worker result
+buffer; event preparation uses whole logical blocks. Workspace roots are granted
+from service configuration. Explicit environment and dotenv grants are private
+runtime inputs, never thread configuration or transcript metadata. External ACP
+provider traffic and native agent journals remain outside managed coverage.
+
+The new agent-redaction package is initially validated through an explicitly
+documented local package archive. Publishing it and upgrading registry lockfiles
+remain separate operator gates; publishable manifests keep semver dependencies.

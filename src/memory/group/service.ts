@@ -1,3 +1,5 @@
+import { CaptureBoundary } from "../../capture/boundary.js";
+import { capturedMemoryStore } from "./capture-store.js";
 import { selectMmr } from "../ranking.js";
 import { createHash } from "node:crypto";
 import type { EmbeddingProvider } from "./embedding-port.js";
@@ -78,20 +80,25 @@ export interface GeneratedMemoryProjection {
 
 export interface ControllerMemoryServiceOptions {
   embeddingProvider?: EmbeddingProvider;
+  capture?: Pick<CaptureBoundary, "clean" | "close">;
   now?: () => number;
 }
 
 export class ControllerMemoryService implements MemoryReader {
   readonly #embedding?: EmbeddingProvider;
+  readonly #capture: Pick<CaptureBoundary, "clean" | "close">;
+  readonly store: MemoryStorePort;
   readonly #now: () => number;
   readonly #embeddingQueue = new Set<string>();
   #embeddingDrain?: Promise<void>;
 
   constructor(
-    readonly store: MemoryStorePort,
+    store: MemoryStorePort,
     readonly config: MemoryDefinition,
     options: ControllerMemoryServiceOptions = {},
   ) {
+    this.#capture = options.capture ?? new CaptureBoundary();
+    this.store = capturedMemoryStore(store, this.#capture);
     this.#now = options.now ?? Date.now;
     this.#embedding = options.embeddingProvider;
     if (config.embeddings.enabled && !this.#embedding)
@@ -140,7 +147,7 @@ export class ControllerMemoryService implements MemoryReader {
     query: string,
     signal?: AbortSignal,
   ): Promise<RecalledMemory> {
-    const text = query.trim();
+    const text = this.#capture.clean(query).trim();
     if (!text) return { refs: [], timedOut: false };
     signal?.throwIfAborted();
     const lexical = this.store.searchFullText(
@@ -212,7 +219,7 @@ export class ControllerMemoryService implements MemoryReader {
     query: MemorySearchQuery,
     signal?: AbortSignal,
   ): Promise<MemorySearchResult[]> {
-    const text = query.query.trim();
+    const text = this.#capture.clean(query.query).trim();
     if (!text) return [];
     if (
       query.since !== undefined &&
@@ -407,6 +414,7 @@ export class ControllerMemoryService implements MemoryReader {
     partitionKey: string;
     projection: GeneratedMemoryProjection;
   }): void {
+    input = this.#capture.clean(input);
     const evidence = this.store.evidenceByIds(input.partitionKey, [
       ...new Set([
         ...input.projection.evidenceEventIds,
@@ -512,6 +520,7 @@ export class ControllerMemoryService implements MemoryReader {
   async close(): Promise<void> {
     await this.#embedding?.close();
     await this.#embeddingDrain?.catch(() => undefined);
+    this.#capture.close();
   }
 
   private indexEvidence(evidence: StoredEvidence): void {
@@ -721,7 +730,7 @@ export class ControllerMemoryService implements MemoryReader {
             modelId: this.#embedding.modelId,
             modelRevision: this.#embedding.modelRevision,
             contentHash: document.contentHash,
-            error: error instanceof Error ? error.message : String(error),
+            error: "embedding_failed",
             updatedAt: this.#now(),
           });
       }

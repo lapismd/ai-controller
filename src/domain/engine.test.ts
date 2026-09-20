@@ -117,6 +117,7 @@ describe("controller execution", () => {
       text: "one",
     });
     await waiting;
+    await expect.poll(() => store.interactions(thread.id).length).toBe(1);
     const interaction = store.interactions(thread.id)[0]!;
     expect(() =>
       controller.respond("other", interaction.id, "allow_once"),
@@ -662,7 +663,8 @@ it("records observed activity without exclusive capture", async () => {
   });
   await controller.drain();
   expect(begins).toEqual([]);
-  expect(observed).toEqual([{ type: "tool.start", name: "mcp_search" }]);
+  expect(observed).toEqual([{ type: "status", status: "Tool running", pending: true }]);
+  expect(store.snapshot("owner", thread.id).transcript.some(event => JSON.stringify(event.data).includes("mcp_search"))).toBe(false);
   await controller.close();
   store.close();
 });

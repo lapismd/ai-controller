@@ -61,7 +61,8 @@
     "@lapismd/ai-host": "^0.1.0",
     "ajv": "^8.20.0",
     "ws": "^8.18.3",
-    "yaml": "^2.9.0"
+    "yaml": "^2.9.0",
+    "@lapismd/agent-redaction": "^0.1.0"
   },
   "devDependencies": {
     "@lapismd/spec-validator": "^0.1.0",

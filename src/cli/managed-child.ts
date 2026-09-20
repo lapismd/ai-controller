@@ -60,6 +60,7 @@ export async function runManagedChild(): Promise<void> {
     workspaces: { default: request.workspace },
     providers,
     credentials: [],
+    ...(request.redaction ? { redaction: request.redaction } : {}),
     ...(request.agentConfig ? { agentConfig: request.agentConfig } : {}),
   };
   const running = await startService(config, [
@@ -69,6 +70,7 @@ export async function runManagedChild(): Promise<void> {
     schema: "lapis-ai-controller.ready/1",
     url: running.url,
     workspace: "default",
+    capturePolicy: running.capturePolicy,
   };
   process.stdout.write(JSON.stringify(ready) + "\n");
   try {

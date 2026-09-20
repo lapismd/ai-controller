@@ -15,6 +15,9 @@ import { serveController } from "./transport/server.js";
 import type { ServiceConfig } from "./cli/config.js";
 import { externalCommand } from "./execution/commands.js";
 import { currentSelfInvocation } from "./cli/self.js";
+import { homedir, tmpdir } from "node:os";
+import { refreshNodeSecrets } from "@lapismd/agent-redaction/node";
+import { CaptureBoundary } from "./capture/boundary.js";
 
 export async function agentRegistry(path?: string) {
   const entries = path
@@ -67,7 +70,17 @@ export async function startService(
         : new CodexProvider(workspaces, { id: provider.id, shimCommand }),
     ]),
   );
-  const store = new ControllerStore(config.database);
+  const capture = new CaptureBoundary({
+    secrets: credentials.map(credential => credential.token),
+    roots: [
+      ...Object.entries(workspaces).map(([id, path]) => ({ kind: "workspace" as const, id, path })),
+      { kind: "home", path: homedir() },
+      { kind: "temp", path: await realpath(tmpdir()), aliases: [tmpdir()] },
+    ],
+  });
+  if (config.redaction && !await refreshNodeSecrets({ registerSecrets: values => capture.registerSecrets(values), dispose: () => capture.close() }, config.redaction))
+    throw new ControllerError("redaction_sources_unavailable", "Granted redaction sources could not be loaded");
+  const store = new ControllerStore(config.database, capture);
   const controller = new Controller(store, providers);
   try {
     const server = await serveController(controller, {
@@ -78,6 +91,7 @@ export async function startService(
     controller.start();
     return {
       url: server.url,
+      capturePolicy: capture.policyId,
       async close() {
         await server.close();
         await controller.close();

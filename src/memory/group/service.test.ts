@@ -24,7 +24,7 @@ function evidence(id: string): StoredEvidence {
       created_at: 1,
       tags: [["e", "conversation"]],
       content: "Atlas uses compact headings.",
-      sig: "sig",
+      sig: "",
     },
     threadRootId: "conversation",
     contentHash: `hash-${id}`,

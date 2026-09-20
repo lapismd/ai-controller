@@ -46,6 +46,7 @@ const schemas: Record<string, object> = {
       toolEndpoint: string,
       memoryEndpoint: string,
       mcpEndpoint: string,
+      transcriptEndpoint: string,
     },
     ["provider", "workspace"],
   ),
@@ -84,6 +85,7 @@ const schemas: Record<string, object> = {
     ["turnId", "outcome", "externalStopped"],
   ),
   "commands.get": object({ commandId: string }, ["commandId"]),
+  "transcript.replay": object({ threadId: string, turnId: string, afterSequence: { type: "integer", minimum: 0 } }, ["threadId"]),
   "events.read": object(
     {
       threadId: string,
@@ -116,6 +118,7 @@ const schemas: Record<string, object> = {
       context: { type: "boolean" },
       mcp: { type: "boolean" },
       capture: { type: "boolean" },
+      transcript: { type: "boolean" },
       required: { type: "boolean" },
       tools: {
         type: "array",

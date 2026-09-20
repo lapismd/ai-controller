@@ -322,10 +322,10 @@ export class AcpProvider implements ExecutionProvider {
         } else
           await context.emit({
             type: "activity",
-            data: (normalized ?? {
-              type: "status",
-              status: "Provider activity unavailable in the normalized schema",
-            }) as unknown as Json,
+            data: (type === "capture_coverage" ? event
+              : type === "status" && event.tag === "plan" ? { type: "plan", entries: event.entries ?? [], observation: event }
+              : normalized ? { ...normalized, observation: event }
+              : { type: "provider_extension", sourceType: type, observation: event }) as unknown as Json,
             sourceId,
           });
       })

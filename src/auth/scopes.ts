@@ -28,6 +28,7 @@ export const RPC_REQUIRED_SCOPES = {
   "interactions.list": "threads:read",
   "interactions.respond": "threads:operate",
   "events.read": "threads:read",
+  "transcript.replay": "threads:read",
   "events.subscribe": "threads:read",
   "events.unsubscribe": "threads:read",
   "memory.search": "memory:read",
@@ -82,7 +83,7 @@ export function scopesForEndpointRegister(
   const scopes = new Set<ControllerScope>();
   if (params.tools) scopes.add("tools:provide");
   if (params.memory) scopes.add("memory:read");
-  if (params.context || params.mcp) scopes.add("threads:operate");
+  if (params.context || params.mcp || params.transcript) scopes.add("threads:operate");
   if (!scopes.size) scopes.add("threads:operate");
   return [...scopes];
 }

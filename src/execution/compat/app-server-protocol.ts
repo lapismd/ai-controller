@@ -72,7 +72,7 @@ export function mapCodexNotification(
     method === "turn/agentMessage/delta"
   ) {
     const text = streamedText(params.delta ?? params.text);
-    return text ? { type: "text", text } : null;
+    return text ? { type: "text", text, ...(typeof params.itemId === "string" ? { messageId: params.itemId } : {}) } : null;
   }
   if (
     method === "item/reasoning/textDelta" ||
@@ -124,6 +124,7 @@ export function mapCodexNotification(
         error: item.error,
       };
     }
+    if (["agentMessage", "reasoning", "plan"].includes(String(item.type))) return { type: "message_complete" };
     return null;
   }
   if (method === "turn/completed") {

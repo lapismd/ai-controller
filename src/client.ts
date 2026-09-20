@@ -20,6 +20,7 @@ export interface EndpointRegistration {
   required?: boolean;
   tools?: ToolDefinition[];
   capture?: boolean;
+  transcript?: boolean;
   memory?: { profile: "lapis-v1" | "nostr-v1" };
   handle(request: EndpointRequest, signal: AbortSignal): Promise<Json>;
 }
@@ -88,6 +89,9 @@ export class ControllerClient {
   }
   snapshot(threadId: string): Promise<Snapshot> {
     return this.request("threads.snapshot", { threadId });
+  }
+  replayTranscript(threadId: string, afterSequence = 0, turnId?: string): Promise<import("./transcript-contracts.js").TranscriptPage> {
+    return this.request("transcript.replay", { threadId, afterSequence, ...(turnId ? { turnId } : {}) });
   }
   cancel(turnId: string): Promise<unknown> {
     return this.request("turns.cancel", { turnId });
@@ -528,7 +532,7 @@ export function reduceSnapshot(
     next.thread.version = Number(data.version);
     next.thread.configuration = data.configuration as Thread["configuration"];
   }
-  if (event.type === "output.activity" || event.type === "output.text") {
+  if ((event.type === "output.activity" || event.type === "transcript.event") || event.type === "output.text") {
     next.transcript.push(event);
     if (next.transcript.length > 2000) {
       next.transcript.shift();

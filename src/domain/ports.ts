@@ -10,6 +10,12 @@ import type {
   Turn,
 } from "../contracts.js";
 import type { MemoryCandidate, MemoryProfile } from "../memory/recall.js";
+import type { TranscriptEvent, TranscriptAcknowledgment, TranscriptPage } from "../transcript-contracts.js";
+
+export interface TranscriptEndpoint {
+  append(thread: Thread, event: TranscriptEvent): Promise<TranscriptAcknowledgment>;
+  replay(thread: Thread, afterSequence: number, turnId?: string): Promise<TranscriptPage>;
+}
 
 export type RuntimeEvent =
   | { type: "text"; text: string; sourceId?: string; messageId?: string; complete?: boolean }

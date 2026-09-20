@@ -183,7 +183,9 @@ export type AgentEventSource = {
 };
 
 export type AgentEvent = (
-  | { type: "text"; text: string }
+  | { type: "text"; text: string; messageId?: string; complete?: boolean }
+  | { type: "provider_extension"; sourceType: string; observation: unknown }
+  | { type: "message_complete" }
   | {
       type: "thinking";
       text: string;
@@ -215,7 +217,7 @@ export type AgentEvent = (
   | { type: "commands.update"; commands: NativeAgentCommand[] }
   | { type: "completed"; result?: unknown }
   | { type: "error"; error: Error }
-) & { source?: AgentEventSource };
+) & { source?: AgentEventSource; observation?: unknown };
 
 export interface AgentSession {
   readonly id: string;

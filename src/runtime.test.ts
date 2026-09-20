@@ -120,22 +120,18 @@ it("preserves transcript order and live approval identity across reconnect witho
       "once",
     );
     await expect.poll(() => events.at(-1)?.type).toBe("completed");
-    expect(events.map((e) => e.type)).toEqual([
+    expect(events.filter((e) => e.type !== "status").map((e) => e.type)).toEqual([
       "thinking",
       "text",
       "permission.request",
-      "tool.start",
       "text",
       "completed",
     ]);
     expect(executions).toBe(1);
     const transcript = (await f.client.snapshot(session.id)).transcript;
-    expect(transcript.map((e) => e.type)).toEqual([
-      "output.activity",
-      "output.text",
-      "output.activity",
-      "output.text",
-    ]);
+    expect(transcript.filter(e => e.type === "output.text").map(e => (e.data as { text: string }).text)).toEqual(["before", "after"]);
+    expect(transcript.filter(e => e.type === "transcript.event").map(e => (e.data as { payload: { kind: string } }).payload.kind)).toContain("omission");
+    expect(events.some(e => e.type === "status" && e.status === "Tool running")).toBe(true);
   } finally {
     await session.close();
     await pump;

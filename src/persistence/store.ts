@@ -1,3 +1,4 @@
+import { CaptureBoundary } from "../capture/boundary.js";
 import { storedTables, validateStoredRecord } from "./schemas.js";
 import { DatabaseSync } from "node:sqlite";
 import { createHash, randomUUID } from "node:crypto";
@@ -47,7 +48,7 @@ export class ControllerStore {
   #closed = false;
   readonly epoch: string;
 
-  constructor(readonly path: string) {
+  constructor(readonly path: string, readonly capture = new CaptureBoundary()) {
     this.#unlock = acquireWriter(path);
     let opened: DatabaseSync | undefined;
     try {
@@ -65,6 +66,7 @@ export class ControllerStore {
         );
       this.#db.exec(`
         CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS transcript_sequence(thread_id TEXT PRIMARY KEY, sequence INTEGER NOT NULL);
         CREATE TABLE IF NOT EXISTS threads(id TEXT PRIMARY KEY, owner TEXT NOT NULL, body TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS turns(id TEXT PRIMARY KEY, thread_id TEXT NOT NULL REFERENCES threads(id), body TEXT NOT NULL);
         CREATE INDEX IF NOT EXISTS turns_thread ON turns(thread_id);
@@ -159,6 +161,7 @@ export class ControllerStore {
     input: ThreadInput,
     application = owner,
   ): Thread {
+    input = this.capture.clean(input, true);
     requiredString(owner, "owner");
     requiredString(input.provider, "provider");
     requiredString(input.workspace, "workspace");
@@ -169,15 +172,16 @@ export class ControllerStore {
     )
       throw new ControllerError("invalid_input", "Unknown payload policy");
     const id = input.id ? requiredString(input.id, "thread id") : randomUUID();
-    const thread: Thread = {
+    const thread: Thread = this.capture.clean({
       ...input,
       id,
       owner,
       application,
       payloadPolicy: input.payloadPolicy ?? "durable",
+      capturePolicy: this.capture.policyId,
       version: 1,
       createdAt: Date.now(),
-    };
+    }, true);
     return this.transaction(() => {
       if (this.thread(id))
         throw new ControllerError("conflict", "Thread already exists");
@@ -189,11 +193,11 @@ export class ControllerStore {
     });
   }
   thread(id: string): Thread | undefined {
-    return decode<Thread>(
-      this.#db.prepare("SELECT body FROM threads WHERE id=?").get(id),
-    );
+    const thread = decode<Thread>(this.#db.prepare("SELECT body FROM threads WHERE id=?").get(id));
+    return thread ? this.capture.clean(thread, true) : undefined;
   }
   bindSession(threadId: string, nativeSessionId: string): void {
+    this.capture.clean({ nativeSessionId }, true);
     requiredString(nativeSessionId, "native session");
     this.transaction(() => {
       const thread = this.thread(threadId);
@@ -229,7 +233,7 @@ export class ControllerStore {
           "thread_busy",
           "Configure the thread after pending turns finish",
         );
-      const next = { ...thread, version: version + 1, configuration };
+      const next = this.capture.clean({ ...thread, version: version + 1, configuration }, true);
       this.#db
         .prepare("UPDATE threads SET body=? WHERE id=?")
         .run(JSON.stringify(next), threadId);
@@ -254,9 +258,10 @@ export class ControllerStore {
     return this.#db
       .prepare("SELECT body FROM threads WHERE owner=? ORDER BY rowid")
       .all(owner)
-      .map((row) => decode<Thread>(row)!);
+      .map((row) => this.capture.clean(decode<Thread>(row)!, true));
   }
   accept(owner: string, input: TurnInput): Receipt {
+    input = this.capture.clean(input, true);
     requiredString(input.commandId, "command id");
     if (
       typeof input.text !== "string" ||
@@ -324,12 +329,13 @@ export class ControllerStore {
     );
   }
   turn(id: string): Turn | undefined {
-    return structuredClone(
+    const value = structuredClone(
       this.#volatileTurns.get(id) ??
         decode<Turn>(
           this.#db.prepare("SELECT body FROM turns WHERE id=?").get(id),
         ),
     );
+    return value ? this.capture.clean(value, true) : undefined;
   }
   turns(threadId?: string): Turn[] {
     const rows = threadId
@@ -339,10 +345,11 @@ export class ControllerStore {
       : this.#db.prepare("SELECT body FROM turns ORDER BY rowid").all();
     return rows.map((row) => {
       const item = decode<Turn>(row)!;
-      return structuredClone(this.#volatileTurns.get(item.id) ?? item);
+      return this.capture.clean(this.#volatileTurns.get(item.id) ?? item, true);
     });
   }
   saveTurn(turn: Turn): void {
+    turn = this.capture.clean(turn, true);
     const privateTurn =
       this.thread(turn.threadId)!.payloadPolicy === "metadata-only";
     const stored = privateTurn
@@ -406,6 +413,7 @@ export class ControllerStore {
     });
   }
   prepare(turnId: string, preparation: Preparation): void {
+    preparation = this.capture.clean(preparation);
     this.transaction(() => {
       const turn = this.turn(turnId)!;
       const durable = this.thread(turn.threadId)!.payloadPolicy === "durable";
@@ -439,7 +447,7 @@ export class ControllerStore {
           .get(turnId),
       );
     return value && typeof value.text === "string"
-      ? structuredClone(value)
+      ? this.capture.clean(value)
       : undefined;
   }
   append(
@@ -454,6 +462,8 @@ export class ControllerStore {
       return this.transaction(() =>
         this.append(threadId, type, data, turnId, sourceId, metadata),
       );
+    data = this.capture.clean(data);
+    this.capture.clean({ threadId, turnId, sourceId }, true);
     const id = sourceId ? `${turnId ?? threadId}:${sourceId}` : randomUUID();
     if (this.#db.prepare("SELECT id FROM events WHERE id=?").get(id))
       return undefined;
@@ -484,6 +494,7 @@ export class ControllerStore {
     return event;
   }
   ingestText(turnId: string, text: string, sourceId?: string, boundary?: { messageId?: string; complete?: boolean }): void {
+    text = this.capture.clean(text);
     this.transaction(() => {
       const turn = this.turn(turnId)!;
       if (isTerminal(turn.state)) return;
@@ -503,12 +514,13 @@ export class ControllerStore {
     });
   }
   interaction(id: string): Interaction | undefined {
-    return structuredClone(
+    const value = structuredClone(
       this.#volatileInteractions.get(id) ??
         decode<Interaction>(
           this.#db.prepare("SELECT body FROM interactions WHERE id=?").get(id),
         ),
     );
+    return value ? this.capture.clean(value, true) : undefined;
   }
   interactions(threadId: string): Interaction[] {
     return this.#db
@@ -517,6 +529,7 @@ export class ControllerStore {
       .map((row) => this.interaction(String(row.id))!);
   }
   putInteraction(interaction: Interaction): void {
+    interaction = this.capture.clean(interaction, true);
     this.transaction(() => {
       const privatePayload =
         this.thread(interaction.threadId)!.payloadPolicy === "metadata-only";
@@ -567,7 +580,7 @@ export class ControllerStore {
   } {
     const rows = this.#db
       .prepare(
-        "SELECT sequence,body FROM events WHERE thread_id=? AND json_extract(body,'$.type') IN ('output.activity','output.text') ORDER BY sequence DESC LIMIT 2001",
+        "SELECT sequence,body FROM events WHERE thread_id=? AND json_extract(body,'$.type') IN ('output.activity','output.text','transcript.event') ORDER BY sequence DESC LIMIT 2001",
       )
       .all(threadId) as unknown as EventRow[];
     const transcriptTruncated = rows.length > 2000;
@@ -576,10 +589,10 @@ export class ControllerStore {
       .reverse()
       .map((row) => {
         const event = JSON.parse(row.body) as ControllerEvent;
-        return structuredClone({
+        return this.capture.clean({
           ...(this.#volatileEvents.get(event.id) ?? event),
           cursor: this.cursor(row.sequence),
-        });
+        }, true);
       });
     return { transcript, transcriptTruncated };
   }
@@ -603,16 +616,30 @@ export class ControllerStore {
         ) as unknown as EventRow[]
     ).map((row) => {
       const stored = JSON.parse(row.body) as ControllerEvent;
-      return structuredClone({
+      return this.capture.clean({
         ...(this.#volatileEvents.get(stored.id) ?? stored),
         cursor: this.cursor(row.sequence),
-      });
+      }, true);
     });
+  }
+  nextTranscriptSequence(threadId: string): number {
+    this.capture.clean({ threadId }, true);
+    return Number(this.#db.prepare("INSERT INTO transcript_sequence(thread_id,sequence) VALUES(?,1) ON CONFLICT(thread_id) DO UPDATE SET sequence=sequence+1 RETURNING sequence").get(threadId)!.sequence);
+  }
+  replayTranscript(owner: string, threadId: string, afterSequence: number, turnId?: string) {
+    this.authorizeThread(owner, threadId);
+    const records = this.#db.prepare("SELECT body FROM events WHERE thread_id=? AND json_extract(body,'$.type')='transcript.event' AND json_extract(body,'$.data.sequence')>? AND (? IS NULL OR json_extract(body,'$.turnId')=?) ORDER BY sequence LIMIT 1001").all(threadId, afterSequence, turnId ?? null, turnId ?? null);
+    const events = records.slice(0, 1000).map(row => {
+      const stored = JSON.parse(String(row.body)) as ControllerEvent;
+      return this.capture.clean((this.#volatileEvents.get(stored.id) ?? stored).data) as unknown as import("../transcript-contracts.js").TranscriptEvent;
+    });
+    return { events, complete: records.length <= 1000, ...(records.length > 1000 ? { nextSequence: events.at(-1)!.sequence } : {}) };
   }
   recover(): void {
     this.transaction(() => {
       for (const turn of this.turns()) {
         if (isTerminal(turn.state)) continue;
+        if (["dispatching", "running", "waiting"].includes(turn.state)) this.append(turn.threadId, "capture.gap", { reason: "unfinished_blocks_discarded_on_restart" }, turn.id, `${turn.attemptId}:restart-gap`, true);
         if (turn.state === "dispatching")
           this.transition(
             turn.id,
@@ -718,6 +745,7 @@ export class ControllerStore {
     if (this.#closed) return;
     this.#closed = true;
     this.#listeners.clear();
+    this.capture.close();
     this.#db.close();
     this.#unlock();
   }

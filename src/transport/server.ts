@@ -1,3 +1,4 @@
+import { assertTranscript } from "../capture/validation.js";
 import { validateMcpServers } from "../domain/mcp.js";
 import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
@@ -271,6 +272,24 @@ export async function serveController(
                       )) === true,
                   }, applicationId),
                 );
+              if (input.transcript === true)
+                disposers.push(controller.registerTranscript(owner, endpointId, {
+                  append: async (thread, event) => {
+                    const response = await call("transcript.append", { threadId: thread.id, workspaceId: thread.workspace, event: event as unknown as Json });
+                    if (!response || typeof response !== "object" || Array.isArray(response) || response.durable !== true || response.eventId !== event.id || response.sequence !== event.sequence)
+                      throw new ControllerError("transcript_unacknowledged", "Transcript endpoint did not acknowledge durable capture");
+                    return { eventId: event.id, sequence: event.sequence, durable: true };
+                  },
+                  replay: async (thread, afterSequence, turnId) => {
+                    const response = await call("transcript.replay", { threadId: thread.id, workspaceId: thread.workspace, afterSequence, ...(turnId ? { turnId } : {}) });
+                    if (!response || typeof response !== "object" || Array.isArray(response) || !Array.isArray(response.events) || response.events.length > 1000 || typeof response.complete !== "boolean")
+                      throw new ControllerError("transcript_invalid", "Transcript replay is invalid");
+                    for (const item of response.events) if (!item || typeof item !== "object" || Array.isArray(item) || item.schema !== "lapis.transcript/1" || item.threadId !== thread.id || (turnId && item.turnId !== turnId))
+                      throw new ControllerError("transcript_invalid", "Transcript replay scope is invalid");
+                    for (const item of response.events) assertTranscript(controller.store.capture.clean(item));
+                    return response as unknown as import("../transcript-contracts.js").TranscriptPage;
+                  },
+                }, applicationId));
               if (input.tools)
                 disposers.push(
                   controller.registerTools(owner, endpointId, {
@@ -403,14 +422,20 @@ function dispatch(
     }
   };
   let targetThread = typeof p.threadId === "string" ? p.threadId : undefined;
-  if (typeof p.turnId === "string")
-    targetThread = store.turn(p.turnId)?.threadId;
+  if (typeof p.turnId === "string") {
+    const turnThread = store.turn(p.turnId)?.threadId;
+    if (targetThread && turnThread && targetThread !== turnThread)
+      throw new ControllerError("scope_conflict", "Turn and thread scope do not match");
+    targetThread = turnThread ?? targetThread;
+  }
   if (method === "interactions.respond")
     targetThread = store.interaction(String(p.id))?.threadId;
   if (method === "commands.get")
     targetThread = store.receipt(owner, String(p.commandId))?.threadId;
   if (targetThread) requireResource(session, store.authorizeThread(owner, targetThread));
   switch (method) {
+    case "transcript.replay":
+      return controller.replayTranscript(owner, String(p.threadId), Number(p.afterSequence ?? 0), typeof p.turnId === "string" ? p.turnId : undefined);
     case "interactions.list":
       store.authorizeThread(owner, String(p.threadId));
       return store.interactions(String(p.threadId));

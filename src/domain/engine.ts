@@ -1,3 +1,6 @@
+import { assertTranscript } from "../capture/validation.js";
+import { CaptureSession, type Captured } from "../capture/session.js";
+import type { TranscriptEndpoint } from "./ports.js";
 import { validateMcpServers } from "./mcp.js";
 import { randomUUID } from "node:crypto";
 import { Ajv } from "ajv";
@@ -48,6 +51,8 @@ export class Controller {
       ]),
     };
   }
+  readonly #transcripts = new Map<string, TranscriptEndpoint>();
+  readonly #captures = new Map<string, CaptureSession>();
   readonly #mcp = new Map<string, McpEndpoint>();
   readonly #sources = new Map<string, ContextSource>();
   readonly #tools = new Map<string, ToolEndpoint>();
@@ -75,6 +80,48 @@ export class Controller {
   start(): void {
     this.store.recover();
     this.schedule();
+  }
+  registerTranscript(owner: string, id: string, endpoint: TranscriptEndpoint, applicationId = owner): () => void {
+    const key = endpointKey(owner, applicationId, id);
+    this.#transcripts.set(key, endpoint);
+    return () => { if (this.#transcripts.get(key) === endpoint) this.#transcripts.delete(key); };
+  }
+  async replayTranscript(owner: string, threadId: string, afterSequence = 0, turnId?: string) {
+    const thread = this.store.authorizeThread(owner, threadId);
+    const endpoint = thread.transcriptEndpoint ? this.#transcripts.get(threadEndpointKey(thread, thread.transcriptEndpoint)) : undefined;
+    if (thread.transcriptEndpoint && !endpoint) throw new ControllerError("transcript_unavailable", "Transcript endpoint unavailable");
+    if (endpoint) return this.store.capture.clean(await endpoint.replay(thread, afterSequence, turnId));
+    return this.store.replayTranscript(owner, threadId, afterSequence, turnId);
+  }
+  private captureFor(turn: Turn): CaptureSession {
+    let capture = this.#captures.get(turn.id);
+    if (!capture) {
+      capture = new CaptureSession(this.store.thread(turn.threadId)!, turn, this.store.capture, () => this.store.nextTranscriptSequence(turn.threadId));
+      this.#captures.set(turn.id, capture);
+    }
+    return capture;
+  }
+  private async persistCapture(turn: Turn, records: Captured[]): Promise<void> {
+    if (!records.length) return;
+    const thread = this.store.thread(turn.threadId)!;
+    const endpoint = thread.transcriptEndpoint ? this.#transcripts.get(threadEndpointKey(thread, thread.transcriptEndpoint)) : undefined;
+    if (thread.transcriptEndpoint && !endpoint) throw new ControllerError("transcript_unavailable", "Transcript endpoint unavailable");
+    for (const { event, projection } of records) {
+      assertTranscript(event);
+      if (endpoint) {
+        const ack = await endpoint.append(thread, event);
+        if (ack.durable !== true || ack.eventId !== event.id || ack.sequence !== event.sequence) throw new ControllerError("transcript_unacknowledged", "Transcript was not durably acknowledged");
+      }
+      this.store.transaction(() => {
+        this.store.append(thread.id, "transcript.event", event as unknown as Json, turn.id, event.id);
+        if (projection?.type === "text") this.store.ingestText(turn.id, projection.text, `${event.id}:projection`, projection);
+        else if (projection?.type === "activity") this.store.append(thread.id, "output.activity", projection.data, turn.id, `${event.id}:projection`);
+      });
+      if (projection?.type === "activity" && this.#capture?.observe) {
+        try { await this.#capture.observe({ caller: "controller", requestKey: event.id, workspaceId: thread.workspace, payload: projection.data }); }
+        catch { /* Advisory native observations never repeat tool effects. */ }
+      }
+    }
   }
   registerMcp(
     owner: string,
@@ -154,16 +201,16 @@ export class Controller {
       workspaceId: thread.workspace,
       threadId: thread.id,
     };
-    return bounded(
+    return this.store.capture.clean(await bounded(
       endpoint.read(
         thread,
         operation,
-        authorizeMemoryInput(input, access),
+        authorizeMemoryInput(this.store.capture.clean(input), access),
         signal,
       ),
       30_000,
       signal,
-    );
+    ));
   }
   registerContext(
     owner: string,
@@ -321,6 +368,7 @@ export class Controller {
         "invalid_response",
         "Tool results use the executor endpoint",
       );
+    response = this.store.capture.clean(response);
     this.store.putInteraction({ ...interaction, state: "resolved", response });
     this.#responses.delete(id);
     waiting.resolve(response);
@@ -402,10 +450,12 @@ export class Controller {
           "provider_unavailable",
           "Provider unavailable",
         );
+      if (thread.nativeSessionId && thread.capturePolicy !== this.store.capture.policyId) throw new ControllerError("legacy_context_handoff_required", "Create a fresh thread with sanitized context before resuming this legacy session");
+      await this.persistCapture(turn, [this.captureFor(turn).record({ kind: "message", role: "user", text: turn.text ?? "", messageId: `${turn.attemptId}:request` })]);
       let preparation = this.store.preparation(turn.id);
       if (!preparation) {
         this.store.transition(turn.id, "preparing");
-        preparation = await prepareTurn(thread, turn, this.#sources, signal);
+        preparation = this.store.capture.clean(await prepareTurn(thread, turn, this.#sources, signal));
         this.store.prepare(turn.id, preparation);
       }
       const mcpEndpoint = thread.mcpEndpoint
@@ -490,7 +540,7 @@ export class Controller {
         thread,
         turn,
         preparation,
-        tools: structuredClone(combined.definitions),
+        tools: this.store.capture.clean(combined.definitions),
         mcpServers,
         signal,
         dispatch: async () => {
@@ -546,6 +596,9 @@ export class Controller {
         );
       }
     } finally {
+      try { await this.persistCapture(turn, this.captureFor(turn).finish("interrupted")); }
+      catch { this.store.append(thread.id, "capture.gap", { reason: "capture_acknowledgment_unavailable" }, turn.id, `${turn.attemptId}:gap`, true); }
+      finally { this.#captures.delete(turn.id); }
       for (const interaction of this.store.interactions(thread.id))
         if (interaction.turnId === turn.id && interaction.state === "pending") {
           this.store.putInteraction({
@@ -562,39 +615,10 @@ export class Controller {
   private async ingest(turnId: string, event: RuntimeEvent): Promise<void> {
     const turn = this.store.turn(turnId)!;
     if (isTerminal(turn.state)) return;
-    this.store.transaction(() => {
-      if (event.type === "completed")
-        this.store.transition(turnId, event.outcome ?? "completed");
-      else if (event.type === "failed")
-        this.store.transition(turnId, "failed", event.code);
-      else {
-        if (["prepared", "dispatching"].includes(turn.state))
-          this.store.transition(turnId, "running");
-        if (event.type === "text")
-          this.store.ingestText(turnId, event.text, event.sourceId, event);
-        else if (event.type === "activity")
-          this.store.append(
-            turn.threadId,
-            "output.activity",
-            event.data,
-            turnId,
-            event.sourceId,
-          );
-      }
-    });
-    if (event.type === "activity" && this.#capture?.observe) {
-      const thread = this.store.thread(turn.threadId);
-      try {
-        await this.#capture.observe({
-          caller: "controller",
-          requestKey: `${turnId}:${event.sourceId ?? "activity"}`,
-          workspaceId: thread?.workspace ?? turn.threadId,
-          payload: event.data,
-        });
-      } catch {
-        // Observed capture must not fail the turn or invoke an application tool.
-      }
-    }
+    if (["prepared", "dispatching"].includes(turn.state)) this.store.transition(turnId, "running");
+    await this.persistCapture(turn, this.captureFor(turn).accept(event));
+    if (event.type === "completed") this.store.transition(turnId, event.outcome ?? "completed");
+    else if (event.type === "failed") this.store.transition(turnId, "failed", this.store.capture.clean(event.code));
   }
   private async interact(
     thread: Thread,
@@ -605,6 +629,8 @@ export class Controller {
     deadline: number,
     signal: AbortSignal,
   ): Promise<Json> {
+    await this.persistCapture(turn, this.captureFor(turn).completeBlock());
+    request = this.store.capture.clean(request);
     const interaction: Interaction = {
       id: randomUUID(),
       threadId: thread.id,
@@ -618,6 +644,7 @@ export class Controller {
     const response = new Promise<Json>((resolve, reject) => {
       this.#responses.set(interaction.id, { resolve, reject });
     });
+    await this.persistCapture(turn, [this.captureFor(turn).record({ kind: kind === "approval" ? "permission" : "input", interactionId: interaction.id, request, state: "pending" })]);
     this.store.putInteraction(interaction);
     this.store.transition(turn.id, "waiting");
     try {
@@ -626,6 +653,7 @@ export class Controller {
         Math.max(0, deadline - Date.now()),
         signal,
       );
+      await this.persistCapture(turn, [this.captureFor(turn).record({ kind: kind === "approval" ? "permission" : "input", interactionId: interaction.id, request, response: value, state: "resolved" })]);
       this.store.transition(turn.id, "running");
       return value;
     } finally {
@@ -654,12 +682,13 @@ export class Controller {
         "invalid_tool_input",
         "Tool arguments do not match schema",
       );
+    const capturedInput = this.store.capture.clean(input);
     const id = nativeId ? `${turn.attemptId}:${nativeId}` : randomUUID();
     const prior = this.store.interaction(id);
     if (prior) {
       if (
         prior.nativeId !== name ||
-        JSON.stringify(prior.request) !== JSON.stringify(input)
+        JSON.stringify(prior.request) !== JSON.stringify(capturedInput)
       )
         throw new ControllerError(
           "invocation_conflict",
@@ -678,10 +707,11 @@ export class Controller {
       turnId: turn.id,
       kind: "tool",
       nativeId: name,
-      request: input,
+      request: capturedInput,
       deadline: Date.now() + 120_000,
       state: "pending",
     };
+    await this.persistCapture(turn, [this.captureFor(turn).record({ kind: "tool-invocation", invocationId: id, name, input: capturedInput, execution: "controller" })]);
     this.store.putInteraction(interaction);
     const mutating = definition.effect !== "read";
     const capture = endpoint.capture?.({ thread, turn, signal }) ?? this.#capture;
@@ -716,7 +746,7 @@ export class Controller {
             caller: "controller",
             requestKey: `${interaction.id}:observe`,
             workspaceId: thread.workspace,
-            payload: { name, input },
+            payload: this.store.capture.clean({ name, input: capturedInput }),
           });
         } catch {
           // Read-effect observations stay non-blocking.
@@ -739,10 +769,14 @@ export class Controller {
           "interaction_stale",
           "Tool result arrived after turn ended",
         );
+      let capturedResult: ToolResult;
+      try { capturedResult = this.store.capture.clean(result); }
+      catch { capturedResult = { content: "Tool completed; result capture omitted", isError: true }; }
+      await this.persistCapture(turn, [this.captureFor(turn).record({ kind: "tool-result", invocationId: id, output: capturedResult.content, outcome: result.isError ? "failed" : "succeeded" })]);
       this.store.putInteraction({
         ...interaction,
         state: "resolved",
-        response: result as unknown as Json,
+        response: capturedResult as unknown as Json,
       });
       if (spanId && capture) {
         await capture.finish({
@@ -753,7 +787,7 @@ export class Controller {
           outcome: "succeeded",
         });
       }
-      return result;
+      return capturedResult;
     } catch (error) {
       this.store.putInteraction({
         ...interaction,
