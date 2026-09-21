@@ -1,12 +1,15 @@
 import {
-  isEmptyToolInput,
-  isGenericToolName,
-  toolNameFromInput,
-} from "./tool-identity.js";
+  extractToolCommand,
+  firstLocationPath,
+  snapshotFromToolActivity,
+  toolDisplayInput,
+  usageCost,
+} from "./tool-snapshot.js";
 import {
   DEFAULT_APPROVAL_OPTIONS,
   type AgentEvent,
   type AgentEventSource,
+  type AgentUsage,
   type ApprovalKind,
   type ApprovalOption,
   type ApprovalRequest,
@@ -29,6 +32,7 @@ export type AcpRuntimeEventLike = {
   content?: unknown[];
   message?: string;
   stopReason?: string;
+  cost?: unknown;
   commands?: Array<{
     name?: string;
     description?: string;
@@ -103,26 +107,25 @@ export function mapAcpRuntimeEvent(
     });
   }
   if (event.type === "tool_call" || event.type === "tool_call_update") {
-    const id = event.toolCallId ?? event.title ?? "acp-tool";
-    const name = acpToolName(event);
+    const snapshot = snapshotFromToolActivity({
+      ...event,
+      id: event.toolCallId ?? event.title ?? "acp-tool",
+      output: event.rawOutput ?? event.content ?? event.text,
+    });
     if (event.status === "completed" || event.status === "failed") {
       return withSource(event, {
         type: "tool.end",
-        id,
-        name,
-        input: acpToolInput(event),
-        output: event.rawOutput ?? event.content ?? event.text,
-        error:
-          event.status === "failed"
-            ? (event.rawOutput ?? event.content ?? event.text)
-            : undefined,
+        ...mappedToolFields(snapshot),
+        ...(snapshot.output !== undefined ? { output: snapshot.output } : {}),
+        ...(event.status === "failed" && snapshot.output !== undefined
+          ? { error: snapshot.output }
+          : {}),
+        ...(snapshot.content !== undefined ? { content: snapshot.content } : {}),
       });
     }
     return withSource(event, {
       type: "tool.start",
-      id,
-      name,
-      input: acpToolInput(event),
+      ...mappedToolFields(snapshot),
     });
   }
   if (event.type === "done") {
@@ -147,15 +150,18 @@ function withSource(
   return event.__source ? { ...mapped, source: { ...event.__source } } : mapped;
 }
 
-function usageFromAcpStatus(
-  event: AcpRuntimeEventLike,
-): { used: number; limit: number } | null {
+function usageFromAcpStatus(event: AcpRuntimeEventLike): AgentUsage | null {
+  const cost = usageCost(event.cost);
   if (
     event.tag === "usage_update" &&
     isFiniteNonNegative(event.used) &&
     isFinitePositive(event.size)
   ) {
-    return { used: event.used, limit: event.size };
+    return {
+      used: event.used,
+      limit: event.size,
+      ...(cost !== undefined ? { cost } : {}),
+    };
   }
   const match = event.text?.match(
     /^usage updated:\s*([\d,]+)\s*\/\s*([\d,]+)$/i,
@@ -164,7 +170,7 @@ function usageFromAcpStatus(
   const used = Number(match[1]?.replaceAll(",", ""));
   const limit = Number(match[2]?.replaceAll(",", ""));
   return isFiniteNonNegative(used) && isFinitePositive(limit)
-    ? { used, limit }
+    ? { used, limit, ...(cost !== undefined ? { cost } : {}) }
     : null;
 }
 
@@ -211,7 +217,21 @@ export function mapAcpPermissionRequest(
     request.toolName ??
     stringValue(toolCall.title) ??
     stringValue(toolCall.kind);
-  const input = request.tool?.input ?? request.input ?? toolCall.rawInput;
+  const rawInput = request.tool?.input ?? request.input ?? toolCall.rawInput;
+  const locations = Array.isArray(toolCall.locations)
+    ? toolCall.locations
+    : undefined;
+  const command = extractToolCommand(
+    rawInput,
+    stringValue(toolCall.title) ?? request.title,
+  );
+  const input = toolDisplayInput({
+    input: rawInput,
+    command,
+    locations,
+    kind: stringValue(toolCall.kind),
+  });
+  const path = firstLocationPath(locations);
   return {
     id,
     origin: "runtime",
@@ -222,12 +242,15 @@ export function mapAcpPermissionRequest(
       request.title ??
       stringValue(toolCall.title) ??
       (toolName ? `Allow ${toolName}?` : "Allow this agent action?"),
-    tool: toolName
+    ...(toolName
       ? {
-          name: String(toolName),
-          input,
+          tool: {
+            name: String(toolName),
+            ...(input !== undefined ? { input } : {}),
+          },
         }
-      : undefined,
+      : {}),
+    ...(path ? { details: { path } } : {}),
     options: options.length > 0 ? options : DEFAULT_APPROVAL_OPTIONS,
   };
 }
@@ -256,20 +279,18 @@ export function mapApprovalOptionToAcpDecision(
   }
 }
 
-function acpToolName(event: AcpRuntimeEventLike): string {
-  const title = stringValue(event.title);
-  if (title && !isGenericToolName(title)) return title;
-  return (
-    toolNameFromInput(event.rawInput) ?? stringValue(event.kind) ?? "acp_tool"
-  );
-}
-
-function acpToolInput(event: AcpRuntimeEventLike): unknown {
-  if (!isEmptyToolInput(event.rawInput)) return event.rawInput;
-  if (Array.isArray(event.locations) && event.locations.length > 0) {
-    return { locations: event.locations };
-  }
-  return undefined;
+function mappedToolFields(snapshot: ReturnType<typeof snapshotFromToolActivity>) {
+  const input = toolDisplayInput(snapshot);
+  return {
+    id: snapshot.id,
+    name: snapshot.name,
+    ...(snapshot.kind ? { kind: snapshot.kind } : {}),
+    ...(snapshot.title ? { title: snapshot.title } : {}),
+    ...(snapshot.command ? { command: snapshot.command } : {}),
+    ...(snapshot.server ? { server: snapshot.server } : {}),
+    ...(snapshot.locations ? { locations: snapshot.locations } : {}),
+    ...(input !== undefined ? { input } : {}),
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

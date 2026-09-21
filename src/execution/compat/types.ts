@@ -174,6 +174,7 @@ export type AgentCapabilities = {
 export type AgentUsage = {
   used: number;
   limit: number;
+  cost?: number;
 };
 
 export type AgentEventSource = {
@@ -196,6 +197,10 @@ export type AgentEvent = (
       id: string;
       name: string;
       server?: string;
+      kind?: string;
+      title?: string;
+      command?: string;
+      locations?: unknown[];
       input?: unknown;
     }
   | {
@@ -203,6 +208,11 @@ export type AgentEvent = (
       id: string;
       name: string;
       server?: string;
+      kind?: string;
+      title?: string;
+      command?: string;
+      locations?: unknown[];
+      content?: unknown;
       input?: unknown;
       output?: unknown;
       error?: unknown;

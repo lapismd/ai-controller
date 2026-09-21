@@ -1,5 +1,13 @@
 import type { Json, Thread, Turn } from "../contracts.js";
 import type { RuntimeEvent } from "../domain/ports.js";
+import {
+  mergeToolActivity,
+  snapshotFromToolActivity,
+  toolDisplayInput,
+  toolEndActivity,
+  toolStartProjection,
+  usageCost,
+} from "../execution/compat/tool-snapshot.js";
 import type { CaptureCoverage, TranscriptEvent, TranscriptPayload } from "../transcript-contracts.js";
 import { CaptureBoundary } from "./boundary.js";
 
@@ -65,8 +73,8 @@ export class CaptureSession {
     if (complete) output.push(...this.#flush());
     return output;
   }
-  #recordUsage(used: number, limit?: number): Captured {
-    const payload: TranscriptPayload = { kind: "usage", used, ...(limit !== undefined ? { limit } : {}) };
+  #recordUsage(used: number, limit?: number, cost?: number): Captured {
+    const payload: TranscriptPayload = { kind: "usage", used, ...(limit !== undefined ? { limit } : {}), ...(cost !== undefined ? { cost } : {}) };
     if (this.#usage?.event) {
       let sanitized;
       try { sanitized = this.boundary.scan(payload, true); }
@@ -114,22 +122,35 @@ export class CaptureSession {
       const usage = object(data.usage);
       const used = Number(usage.used ?? data.used);
       const limit = Number(usage.limit ?? data.limit);
+      const cost = usageCost(usage.cost ?? data.cost);
       if (Number.isFinite(used) && used >= 0)
-        output.push(this.#recordUsage(used, Number.isFinite(limit) && limit > 0 ? limit : undefined));
+        output.push(this.#recordUsage(used, Number.isFinite(limit) && limit > 0 ? limit : undefined, cost));
     } else if (type === "tool.start") {
       const id = String(data.id ?? "tool");
-      if (this.#tools.size >= 128 || new TextEncoder().encode(JSON.stringify(data)).byteLength > 4 * 1024 * 1024) {
+      const merged = mergeToolActivity(this.#tools.get(id), data);
+      if (this.#tools.size >= 128 || new TextEncoder().encode(JSON.stringify(merged)).byteLength > 4 * 1024 * 1024) {
         output.push(this.record({ kind: "omission", reason: "tool_capture_limit" }));
       } else {
-        this.#tools.set(id, data);
-        output.push(this.#status("Tool running"));
+        this.#tools.set(id, merged);
+        output.push({ projection: { type: "activity", data: toolStartProjection(snapshotFromToolActivity(merged)) } });
       }
     } else if (type === "tool.end") {
-      const id = String(data.id ?? "tool"), previous = this.#tools.get(id);
+      const id = String(data.id ?? "tool");
+      const merged = mergeToolActivity(this.#tools.get(id), data);
       this.#tools.delete(id);
-      const name = String(data.name ?? previous?.name ?? "tool");
-      output.push(this.record({ kind: "tool-invocation", invocationId: id, name, input: data.input ?? previous?.input ?? null, execution: "observed" }));
-      output.push(this.record({ kind: "tool-result", invocationId: id, output: data.output ?? data.error ?? null, outcome: data.error == null ? "succeeded" : "failed" }, input));
+      const snapshot = snapshotFromToolActivity(merged);
+      const envelope = (toolDisplayInput(snapshot) ?? {}) as Json;
+      output.push(this.record({
+        kind: "tool-invocation", invocationId: id, name: snapshot.name || "tool", input: envelope, execution: "observed",
+        ...(snapshot.command ? { command: snapshot.command } : {}),
+        ...(snapshot.locations ? { locations: merged.locations } : {}),
+        ...(snapshot.kind ? { toolKind: snapshot.kind } : {}),
+      }));
+      output.push(this.record({
+        kind: "tool-result", invocationId: id, output: (snapshot.output ?? snapshot.error ?? null) as Json,
+        outcome: snapshot.error == null ? "succeeded" : "failed",
+        ...(snapshot.content !== undefined ? { content: merged.content } : {}),
+      }, { type: "activity", data: toolEndActivity(snapshot), ...(input.sourceId ? { sourceId: input.sourceId } : {}) }));
     } else if (type === "plan" && Array.isArray(data.entries)) {
       const entries = data.entries.map(entry => object(entry)).filter(entry => typeof entry.content === "string" && ["pending", "in_progress", "completed"].includes(String(entry.status))).map(entry => ({ content: String(entry.content), status: entry.status as "pending" | "in_progress" | "completed", ...(["high", "medium", "low"].includes(String(entry.priority)) ? { priority: entry.priority as "high" | "medium" | "low" } : {}) }));
       output.push(this.record({ kind: "plan", entries }, input));

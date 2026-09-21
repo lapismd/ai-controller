@@ -56,6 +56,70 @@ it("retains plans, tool input/results, and coverage metadata without leftover ro
   expect(JSON.stringify(end)).not.toContain(secret);
   expect(end[1]?.event?.payload).toMatchObject({ invocationId: "tool", outcome: "succeeded" });
 });
+it("merges a thin tool update onto the original command envelope", () => {
+  const { capture } = fixture();
+  const start = capture.accept({
+    type: "activity",
+    data: {
+      type: "tool.start",
+      id: "bash",
+      title: "tool call",
+      kind: "execute",
+      command: "npm test",
+      input: { command: "npm test" },
+    },
+    sourceId: "start",
+  });
+  expect(kinds(start)).toEqual([undefined]);
+  expect(start[0]?.projection).toMatchObject({
+    type: "activity",
+    data: { type: "tool.start", id: "bash", name: "execute", kind: "execute", command: "npm test" },
+  });
+  capture.accept({
+    type: "activity",
+    data: { type: "tool.start", id: "bash", name: "acp_tool" },
+    sourceId: "update",
+  });
+  const end = capture.accept({
+    type: "activity",
+    data: { type: "tool.end", id: "bash", name: "acp_tool", output: "ok" },
+    sourceId: "end",
+  });
+  expect(end[0]?.event?.payload).toMatchObject({
+    kind: "tool-invocation",
+    invocationId: "bash",
+    name: "execute",
+    input: { command: "npm test" },
+    command: "npm test",
+    toolKind: "execute",
+  });
+  expect(end[1]?.event?.payload).toMatchObject({
+    kind: "tool-result",
+    invocationId: "bash",
+    output: "ok",
+    outcome: "succeeded",
+  });
+  expect(end[1]?.projection).toMatchObject({
+    type: "activity",
+    data: { type: "tool.end", id: "bash", name: "execute", command: "npm test" },
+  });
+});
+it("retains optional usage cost on the single usage snapshot", () => {
+  const { capture } = fixture();
+  const first = capture.accept({
+    type: "activity",
+    data: { type: "usage", used: 4, limit: 10, cost: 0.2 },
+    sourceId: "u1",
+  });
+  expect(first[0]?.event?.payload).toMatchObject({ kind: "usage", used: 4, limit: 10, cost: 0.2 });
+  const later = capture.accept({
+    type: "activity",
+    data: { type: "usage", used: 8, limit: 10, cost: 0.4 },
+    sourceId: "u2",
+  });
+  expect(later[0]?.event?.id).toBe(first[0]?.event?.id);
+  expect(later[0]?.event?.payload).toMatchObject({ kind: "usage", used: 8, limit: 10, cost: 0.4 });
+});
 it("deduplicates transport observations without using their IDs as message IDs", () => {
   const { capture } = fixture();
   const chunk = { type: "text" as const, text: "done", sourceId: "transport-1", complete: true };

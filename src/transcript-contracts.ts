@@ -11,13 +11,13 @@ export type TranscriptPayload =
   | { kind: "message"; role: "user" | "assistant"; text: string; messageId: string }
   | { kind: "thinking"; text: string; visible: true; blockId: string }
   | { kind: "plan"; entries: Array<{ content: string; status: "pending" | "in_progress" | "completed"; priority?: "high" | "medium" | "low" }> }
-  | { kind: "tool-invocation"; invocationId: string; name: string; input: Json; execution: "observed" | "controller" }
-  | { kind: "tool-result"; invocationId: string; output: Json; outcome: "succeeded" | "failed" | "unknown" }
+  | { kind: "tool-invocation"; invocationId: string; name: string; input: Json; execution: "observed" | "controller"; command?: string; locations?: Json; toolKind?: string }
+  | { kind: "tool-result"; invocationId: string; output: Json; outcome: "succeeded" | "failed" | "unknown"; content?: Json }
   | { kind: "file"; operation: "read" | "write" | "delete" | "rename"; path: LogicalPath; details?: Json }
   | { kind: "patch"; paths: LogicalPath[]; patch: string }
   | { kind: "command"; invocationId: string; command: string; output?: string; exitCode?: number }
   | { kind: "permission" | "input"; interactionId: string; request: Json; response?: Json; state: string }
-  | { kind: "usage"; used: number; limit?: number }
+  | { kind: "usage"; used: number; limit?: number; cost?: number }
   | { kind: "lifecycle"; state: string; details?: Json }
   | { kind: "error"; code: string; message?: string }
   | { kind: "cancellation"; reason: string }

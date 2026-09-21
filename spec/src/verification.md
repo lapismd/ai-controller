@@ -27,6 +27,7 @@
 | AIC-GOV-003 | Implemented | pnpm spec:check |
 | AIC-CAP-001 | Implemented | src/persistence/sanitization.test.ts inspects first SQL bindings; src/memory/group/capture-store.test.ts checks index ingress/replay |
 | AIC-CAP-002 | Implemented | src/capture/session.test.ts; public allowlist without lifecycle or extension leftovers; one usage snapshot after several updates; src/execution/compat/acp-event-mapper.test.ts folds tool_call_update into the same tool pair |
+| AIC-CAP-008 | Implemented | src/execution/compat/tool-snapshot.test.ts extracts command and merges updates; src/capture/session.test.ts keeps original args and name across a thin tool_call_update; src/execution/compat/acp-event-mapper.test.ts maps command, locations, permission envelope and optional usage cost |
 | AIC-CAP-003 | Implemented | src/capture/session.test.ts whole logical messages, thinking, immediate fixed status and interruption gaps |
 | AIC-CAP-004 | Implemented | src/transport/transcript.test.ts owner authorization, durable acknowledgment before execution, remote encrypted-journal deadline and metadata-only replay |
 | AIC-CAP-005 | Implemented | src/persistence/sanitization.test.ts raw tool execution and sanitized model results; existing unknown-outcome recovery tests |

@@ -1,3 +1,5 @@
+import { preferToolName } from "./tool-identity.js";
+import { extractToolCommand } from "./tool-snapshot.js";
 import {
   DEFAULT_APPROVAL_OPTIONS,
   type AgentEvent,
@@ -60,6 +62,32 @@ function toolInput(item: Record<string, unknown>): unknown {
   return item.command ?? item.arguments ?? item.input ?? item.changes;
 }
 
+function mappedCodexTool(
+  type: "tool.start" | "tool.end",
+  item: Record<string, unknown>,
+  params: Record<string, unknown>,
+): AgentEvent {
+  const input = toolInput(item);
+  const command = extractToolCommand(input, stringValue(item.command));
+  const server = stringValue(item.server);
+  const output =
+    item.result ?? item.aggregatedOutput ?? item.contentItems ?? item.output;
+  const event = {
+    type,
+    id: String(item.id ?? params.itemId ?? "codex-tool"),
+    name: preferToolName(undefined, toolName(item)),
+    ...(server ? { server } : {}),
+    ...(input !== undefined ? { input } : {}),
+    ...(command ? { command } : {}),
+  };
+  if (type === "tool.start") return event;
+  return {
+    ...event,
+    ...(output !== undefined ? { output } : {}),
+    ...(item.error !== undefined ? { error: item.error } : {}),
+  };
+}
+
 export function mapCodexNotification(
   message: AppServerMessage,
 ): AgentEvent | null {
@@ -101,28 +129,11 @@ export function mapCodexNotification(
   }
   if (method === "item/started" || method === "item/toolCall/started") {
     if (!isToolItem(item) && method !== "item/toolCall/started") return null;
-    return {
-      type: "tool.start",
-      id: String(item.id ?? params.itemId ?? "codex-tool"),
-      name: toolName(item),
-      server: stringValue(item.server),
-      input: toolInput(item),
-    };
+    return mappedCodexTool("tool.start", item, params);
   }
   if (method === "item/completed") {
     if (isToolItem(item)) {
-      return {
-        type: "tool.end",
-        id: String(item.id ?? params.itemId ?? "codex-tool"),
-        name: toolName(item),
-        server: stringValue(item.server),
-        output:
-          item.result ??
-          item.aggregatedOutput ??
-          item.contentItems ??
-          item.output,
-        error: item.error,
-      };
+      return mappedCodexTool("tool.end", item, params);
     }
     if (["agentMessage", "reasoning", "plan"].includes(String(item.type))) return { type: "message_complete" };
     return null;

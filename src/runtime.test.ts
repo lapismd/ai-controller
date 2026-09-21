@@ -124,6 +124,7 @@ it("preserves transcript order and live approval identity across reconnect witho
       "thinking",
       "text",
       "permission.request",
+      "tool.start",
       "text",
       "completed",
     ]);
@@ -131,7 +132,7 @@ it("preserves transcript order and live approval identity across reconnect witho
     const transcript = (await f.client.snapshot(session.id)).transcript;
     expect(transcript.filter(e => e.type === "output.text").map(e => (e.data as { text: string }).text)).toEqual(["before", "after"]);
     expect(transcript.filter(e => e.type === "transcript.event").map(e => (e.data as { payload: { kind: string } }).payload.kind)).toContain("omission");
-    expect(events.some(e => e.type === "status" && e.status === "Tool running")).toBe(true);
+    expect(events.some(e => e.type === "tool.start")).toBe(true);
   } finally {
     await session.close();
     await pump;

@@ -29,6 +29,7 @@ describe("ACP event mapper", () => {
       type: "tool.start",
       id: "t1",
       name: "read",
+      title: "read",
       input: { path: "a" },
     });
     expect(
@@ -44,9 +45,9 @@ describe("ACP event mapper", () => {
       type: "tool.end",
       id: "t1",
       name: "read",
+      title: "read",
       input: { path: "a" },
       output: "ok",
-      error: undefined,
     });
     expect(
       mapAcpRuntimeEvent({
@@ -60,7 +61,9 @@ describe("ACP event mapper", () => {
       type: "tool.start",
       id: "t-generic",
       name: "search",
-      input: undefined,
+      kind: "search",
+      title: "tool call",
+      input: { kind: "search" },
     });
     expect(
       mapAcpRuntimeEvent({
@@ -73,6 +76,8 @@ describe("ACP event mapper", () => {
       type: "tool.start",
       id: "t2",
       name: "read",
+      title: "read",
+      locations: [{ path: "Notes/a.md" }],
       input: { locations: [{ path: "Notes/a.md" }] },
     });
     expect(
@@ -87,9 +92,25 @@ describe("ACP event mapper", () => {
       type: "tool.end",
       id: "t1",
       name: "read",
-      input: undefined,
+      title: "read",
       output: "ok",
-      error: undefined,
+    });
+    expect(
+      mapAcpRuntimeEvent({
+        type: "tool_call",
+        toolCallId: "t-cmd",
+        title: "tool call",
+        kind: "execute",
+        rawInput: { command: "npm install" },
+      }),
+    ).toEqual({
+      type: "tool.start",
+      id: "t-cmd",
+      name: "execute",
+      kind: "execute",
+      title: "tool call",
+      command: "npm install",
+      input: { command: "npm install" },
     });
     expect(mapAcpRuntimeEvent({ type: "done", stopReason: "end" })).toEqual({
       type: "completed",
@@ -119,6 +140,18 @@ describe("ACP event mapper", () => {
     ).toEqual({
       type: "usage",
       usage: { used: 25_645, limit: 258_400 },
+    });
+    expect(
+      mapAcpRuntimeEvent({
+        type: "status",
+        tag: "usage_update",
+        used: 10,
+        size: 100,
+        cost: { amount: 0.12 },
+      }),
+    ).toEqual({
+      type: "usage",
+      usage: { used: 10, limit: 100, cost: 0.12 },
     });
   });
 
@@ -187,6 +220,32 @@ describe("ACP event mapper", () => {
       tool: { name: "npm install", input: { command: "npm install" } },
     });
     expect(request.metadata).toBeUndefined();
+  });
+
+  it("fills a permission envelope from locations when raw input is empty", () => {
+    const request = mapAcpPermissionRequest({
+      requestId: "p-loc",
+      inferredKind: "read",
+      raw: {
+        toolCall: {
+          toolCallId: "tc-read",
+          title: "read",
+          kind: "read",
+          rawInput: {},
+          locations: [{ path: "Notes/a.md" }],
+        },
+        options: [{ optionId: "allow-once", kind: "allow_once", name: "Allow" }],
+      },
+    });
+    expect(request).toMatchObject({
+      id: "p-loc",
+      kind: "read",
+      tool: {
+        name: "read",
+        input: { locations: [{ path: "Notes/a.md" }], kind: "read" },
+      },
+      details: { path: "Notes/a.md" },
+    });
   });
 
   it("maps available command updates onto the binding catalog event", () => {

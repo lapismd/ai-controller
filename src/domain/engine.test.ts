@@ -663,8 +663,8 @@ it("records observed activity without exclusive capture", async () => {
   });
   await controller.drain();
   expect(begins).toEqual([]);
-  expect(observed).toEqual([{ type: "status", status: "Tool running", pending: true }]);
-  expect(store.snapshot("owner", thread.id).transcript.some(event => JSON.stringify(event.data).includes("mcp_search"))).toBe(false);
+  expect(observed).toEqual([{ type: "tool.start", id: "tool", name: "mcp_search", pending: true }]);
+  expect(store.snapshot("owner", thread.id).transcript.filter((event) => event.type === "transcript.event").some((event) => JSON.stringify(event.data).includes("mcp_search"))).toBe(false);
   await controller.close();
   store.close();
 });

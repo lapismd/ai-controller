@@ -104,9 +104,9 @@ describe("Codex app-server protocol mapper", () => {
       type: "tool.end",
       id: "cmd-1",
       name: "command",
-      server: undefined,
+      command: "pwd",
+      input: "pwd",
       output: "/vault",
-      error: undefined,
     });
   });
 
