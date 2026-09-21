@@ -17,6 +17,7 @@ export type TranscriptPayload =
   | { kind: "patch"; paths: LogicalPath[]; patch: string }
   | { kind: "command"; invocationId: string; command: string; output?: string; exitCode?: number }
   | { kind: "permission" | "input"; interactionId: string; request: Json; response?: Json; state: string }
+  | { kind: "usage"; used: number; limit?: number }
   | { kind: "lifecycle"; state: string; details?: Json }
   | { kind: "error"; code: string; message?: string }
   | { kind: "cancellation"; reason: string }

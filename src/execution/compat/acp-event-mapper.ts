@@ -102,7 +102,7 @@ export function mapAcpRuntimeEvent(
       status: event.text ?? event.status ?? "status",
     });
   }
-  if (event.type === "tool_call") {
+  if (event.type === "tool_call" || event.type === "tool_call_update") {
     const id = event.toolCallId ?? event.title ?? "acp-tool";
     const name = acpToolName(event);
     if (event.status === "completed" || event.status === "failed") {

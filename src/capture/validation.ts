@@ -21,6 +21,7 @@ export function assertTranscript(value: unknown): asserts value is TranscriptEve
     case "patch": valid = Array.isArray(p.paths) && p.paths.every(path) && text(p.patch); break;
     case "command": valid = id(p.invocationId) && text(p.command); break;
     case "permission": case "input": valid = id(p.interactionId) && "request" in p && text(p.state); break;
+    case "usage": valid = Number.isFinite(Number(p.used)) && Number(p.used) >= 0 && (p.limit === undefined || Number.isFinite(Number(p.limit)) && Number(p.limit) > 0); break;
     case "lifecycle": valid = text(p.state); break;
     case "error": valid = text(p.code); break;
     case "cancellation": case "omission": valid = text(p.reason); break;

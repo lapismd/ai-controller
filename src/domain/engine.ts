@@ -107,18 +107,24 @@ export class Controller {
     const endpoint = thread.transcriptEndpoint ? this.#transcripts.get(threadEndpointKey(thread, thread.transcriptEndpoint)) : undefined;
     if (thread.transcriptEndpoint && !endpoint) throw new ControllerError("transcript_unavailable", "Transcript endpoint unavailable");
     for (const { event, projection } of records) {
-      assertTranscript(event);
-      if (endpoint) {
-        const ack = await endpoint.append(thread, event);
-        if (ack.durable !== true || ack.eventId !== event.id || ack.sequence !== event.sequence) throw new ControllerError("transcript_unacknowledged", "Transcript was not durably acknowledged");
+      if (event) {
+        assertTranscript(event);
+        if (endpoint) {
+          const ack = await endpoint.append(thread, event);
+          if (ack.durable !== true || ack.eventId !== event.id || ack.sequence !== event.sequence) throw new ControllerError("transcript_unacknowledged", "Transcript was not durably acknowledged");
+        }
       }
       this.store.transaction(() => {
-        this.store.append(thread.id, "transcript.event", event as unknown as Json, turn.id, event.id);
-        if (projection?.type === "text") this.store.ingestText(turn.id, projection.text, `${event.id}:projection`, projection);
-        else if (projection?.type === "activity") this.store.append(thread.id, "output.activity", projection.data, turn.id, `${event.id}:projection`);
+        if (event) this.store.append(thread.id, "transcript.event", event as unknown as Json, turn.id, event.id);
+        if (projection?.type === "text" && event) this.store.ingestText(turn.id, projection.text, `${event.id}:projection`, projection);
+        else if (projection?.type === "activity") {
+          const data = projection.data && typeof projection.data === "object" && !Array.isArray(projection.data) ? projection.data : {};
+          const status = String(data.status ?? data.type ?? "activity");
+          this.store.append(thread.id, "output.activity", projection.data, turn.id, `${event?.id ?? `${turn.attemptId}:${status}`}:projection`);
+        }
       });
       if (projection?.type === "activity" && this.#capture?.observe) {
-        try { await this.#capture.observe({ caller: "controller", requestKey: event.id, workspaceId: thread.workspace, payload: projection.data }); }
+        try { await this.#capture.observe({ caller: "controller", requestKey: event?.id ?? `${turn.attemptId}:status`, workspaceId: thread.workspace, payload: projection.data }); }
         catch { /* Advisory native observations never repeat tool effects. */ }
       }
     }
