@@ -13,6 +13,7 @@ import {
   mapAcpPermissionRequest,
   mapApprovalOptionToAcpDecision,
 } from "./compat/acp-event-mapper.js";
+import { rejectedRequestedConfiguration } from "./acp-configure.js";
 
 interface ActiveSession {
   sessionId: string;
@@ -160,14 +161,12 @@ export class AcpProvider implements ExecutionProvider {
           ? { thinking: thinking as "off" | "low" | "medium" | "high" }
           : {}),
       });
-      if (
-        effective.model?.status === "unsupported" ||
-        effective.thinking?.status === "unsupported"
-      )
-        throw new ControllerError(
-          "unsupported_configuration",
-          "Provider rejected requested configuration",
-        );
+      const rejected = rejectedRequestedConfiguration(
+        { model, thinking },
+        effective,
+      );
+      if (rejected)
+        throw new ControllerError("unsupported_configuration", rejected.reason);
     }
     session.context = context;
     const completion = new Promise<void>((resolve, reject) => {

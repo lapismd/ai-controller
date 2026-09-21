@@ -7,7 +7,7 @@
 | AIC-CORE-003 | Implemented | src/persistence/store.test.ts; conservative unknown and interruption states |
 | AIC-CORE-004 | Implemented | src/persistence/store.test.ts; src/transport/server.test.ts |
 | AIC-CORE-005 | Implemented | src/persistence/store.test.ts; private command, output, preparation, tool payloads and diagnostic exceptions |
-| AIC-CORE-006 | Implemented | src/service.test.ts; src/persistence/store.test.ts; src/runtime.test.ts restricted reattachment; execution ACP identity/session-boundary tests; transport server read/write capture callback ordering and disconnect tests |
+| AIC-CORE-006 | Implemented | src/service.test.ts; src/persistence/store.test.ts; src/runtime.test.ts restricted reattachment; execution ACP identity/session-boundary tests; ACP configure helper tests keep host-invented unsupported thinking non-fatal and fail closed only for requested fields; transport server read/write capture callback ordering and disconnect tests |
 | AIC-TOOL-001 | Implemented | src/domain/engine.test.ts; src/transport/server.test.ts |
 | AIC-TOOL-002 | Implemented | src/domain/engine.test.ts; src/execution/compat/app-server-protocol.test.ts |
 | AIC-TOOL-003 | Implemented | src/domain/engine.test.ts wraps mutating tools with cooperative capture, fails closed when begin throws, and records observed activity without exclusive begin |
