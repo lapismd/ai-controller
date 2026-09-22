@@ -42,7 +42,7 @@ Endpoint disposal revokes tools, context and memory registrations immediately.
 | AIC-CAP-004 | A consumer transcript endpoint MUST authorize owner/application/thread access, support idempotent append and replay, and acknowledge durable capture before subscriber delivery. Metadata-only mode MUST retain no plaintext transcript locally and MUST identify unavailable external history rather than invent recovery. |
 | AIC-CAP-005 | Controller-dispatched tools MUST persist sanitized intent before raw authorized execution and persist sanitized results before provider delivery. Capture failure after effects MUST record outcome/omission and MUST NOT rerun effects. Tool results MUST reference their invocation. |
 | AIC-CAP-006 | Replay, summaries, memory indexes and provider-bound context MUST be sanitized derived views. Legacy rows MUST be labelled legacy and re-sanitized before export, without silently rewriting history. Incompatible native sessions MUST require a fresh context handoff. |
-| AIC-CAP-007 | Managed stderr and top-level diagnostics MUST emit scanned complete records or fixed payload-free omissions. No timed partial flush or raw exception fallback is permitted. Nostr signing credentials MUST never enter shared-controller secret matching. |
+| AIC-CAP-007 | Managed stderr and top-level diagnostics MUST emit scanned complete records or fixed payload-free omissions. No timed partial flush or raw exception fallback is permitted. Nostr signing credentials MUST never enter shared-controller secret matching. The exported process client MUST write the start request immediately after spawn, MUST NOT wait for stdin finish or close, wait at least 60 seconds for readiness, resolve a bare executable from PATH or `$HOME/.local/bin`, and include the readiness cause in start failures without credentials. |
 | AIC-TOOL-001 | Tool invocation identity, execution outcome and result delivery MUST be distinct. Non-idempotent unknown outcomes MUST NOT be redispatched automatically.                                                                    |
 | AIC-TOOL-002 | Native observed tool activity MUST NOT invoke an application handler. Approval and structured input MUST use distinct typed interactions, authority and liveness checks.                                                     |
 | AIC-TOOL-003 | When a `ToolCapture` port is configured, mutating `callTool` invocations MUST begin a cooperative span before `endpoint.execute` and finish it after. Capture unavailability MUST fail closed and MUST NOT execute the tool. Stream-only activity MUST use optional `observe` without an exclusive lease and MUST NOT fail the turn. The published controller MUST NOT depend on `jj-checkpoint`. |
@@ -88,11 +88,16 @@ Thread configuration uses optimistic versions and rejects changes during work.
 
 Managed application integrations launch the separate controller executable through
 an exported process client. Startup credentials travel over the child's private
-stdin, never argv. The caller supplies an allowlisted environment and a stable
-database path. The child reads generic provider definitions, reports readiness
-without credentials, and shares the same service/core as `serve`. Nostr signing
-and vault credentials remain outside this interface. Restricted sessions reject
-application tools and configure the provider's restricted execution mode.
+stdin, never argv. The client writes that request immediately after spawn and does not wait for
+stdin finish or close; compiled Deno pipes may never emit those events, and
+`readline.close()` does not close stdin. The default
+readiness wait is 60 seconds. Start failures include the readiness cause without
+credentials. A bare executable name is resolved from PATH or `$HOME/.local/bin`.
+The caller supplies an allowlisted environment and a stable database path. The
+child reads generic provider definitions, reports readiness without credentials,
+and shares the same service/core as `serve`. Nostr signing and vault credentials
+remain outside this interface. Restricted sessions reject application tools and
+configure the provider's restricted execution mode.
 
 Runtime facades recognize the stored `payloadUnavailable` event marker and
 emit an explicit status gap rather than dropping missing private activity.

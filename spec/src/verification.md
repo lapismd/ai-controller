@@ -32,4 +32,4 @@
 | AIC-CAP-004 | Implemented | src/transport/transcript.test.ts owner authorization, durable acknowledgment before execution, remote encrypted-journal deadline and metadata-only replay |
 | AIC-CAP-005 | Implemented | src/persistence/sanitization.test.ts raw tool execution and sanitized model results; existing unknown-outcome recovery tests |
 | AIC-CAP-006 | Implemented | Group capture-store and Lapis native-memory-service tests cover first index writes and legacy reads; execution location capabilities remain separate |
-| AIC-CAP-007 | Implemented | Managed stderr buffers complete EOF with bounded scan; local compiled binary starts its isolated scanner and persists a policy-bearing thread |
+| AIC-CAP-007 | Implemented | Managed stderr buffers complete EOF with bounded scan; local compiled binary starts its isolated scanner and persists a policy-bearing thread; start does not await stdin finish; start writes resolve without stdin close; start failures include the readiness cause; bare names resolve from PATH or `$HOME/.local/bin` |
