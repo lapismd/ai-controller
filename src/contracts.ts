@@ -27,7 +27,7 @@ export type ProviderConfig = {
   vcsIdentity?: { name: string; email: string };
   restricted?: boolean;
   model?: string;
-  thinking?: string;
+  thinking?: string; permissionMode?: string;
   agent?: string;
   options?: Record<string, Json>;
 };

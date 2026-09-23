@@ -129,15 +129,19 @@ export class AcpProvider implements ExecutionProvider {
         session.bridgeId = bridge.bridgeId;
       }
       try {
-        const result = await this.#executor.startAcpSession(this.#sink, {
+        const start = {
           sessionId: session.sessionId,
           agent: this.options.agent,
           workspace,
           restricted: preparation.configuration.restricted,
+          ...(preparation.configuration.permissionMode
+            ? { permissionMode: preparation.configuration.permissionMode }
+            : {}),
           metadata: { vcsIdentity: preparation.configuration.vcsIdentity },
           mcpServers: context.mcpServers,
           ...(session.bridgeId ? { appToolBridgeId: session.bridgeId } : {}),
-        });
+        };
+        const result = await this.#executor.startAcpSession(this.#sink, start);
         session.sessionId = result.sessionId;
       } catch (error) {
         this.#sessions.delete(thread.id);
