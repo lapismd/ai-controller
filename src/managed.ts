@@ -57,7 +57,7 @@ export class ManagedControllerProcess {
       [...(options.executable?.argsPrefix ?? []), "__internal", "managed"],
       { env: options.env, stdio: ["pipe", "pipe", "pipe"] },
     );
-    void writeManagedStart(child.stdin, {
+    const request: ManagedStartRequest = {
       schema: "lapis-ai-controller.managed/1",
       token,
       workspace: options.workspace,
@@ -66,7 +66,7 @@ export class ManagedControllerProcess {
       ...(options.agentConfig ? { agentConfig: options.agentConfig } : {}),
       bind: options.bind ?? "127.0.0.1",
       port: options.port ?? 0,
-    }).catch(() => undefined);
+    };
     const lines = createInterface({ input: child.stdout });
     child.stderr.setEncoding("utf8");
     const diagnostics = new SynchronousRedaction({
@@ -143,7 +143,10 @@ export class ManagedControllerProcess {
         timer.unref?.();
       }),
     ]);
+    void ready.catch(() => undefined);
     try {
+      await waitForSpawn(child);
+      await writeManagedStart(child.stdin, request);
       const frame = await ready;
       return new ManagedControllerProcess(child, { ...frame, token });
     } catch (error) {
@@ -203,6 +206,24 @@ export function resolveManagedExecutable(
   }
   return command;
 }
+export function waitForSpawn(child: {
+  pid?: number;
+  once(event: "spawn" | "error", listener: (error?: Error) => void): void;
+}): Promise<void> {
+  if (child.pid) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    child.once("spawn", () => resolve());
+    child.once("error", () =>
+      reject(
+        new ControllerError(
+          "controller_unavailable",
+          "Controller executable could not start",
+        ),
+      ),
+    );
+  });
+}
+
 export async function writeManagedStart(
   input: Writable,
   request: ManagedStartRequest,
@@ -212,7 +233,6 @@ export async function writeManagedStart(
     const fail = () => {
       if (settled) return;
       settled = true;
-      input.off("finish", succeed);
       reject(
         new ControllerError(
           "controller_input_closed",
@@ -227,7 +247,9 @@ export async function writeManagedStart(
       resolve();
     };
     input.once("error", fail);
-    input.once("finish", succeed);
-    input.end(`${JSON.stringify(request)}\n`);
+    input.write(`${JSON.stringify(request)}\n`, (error) => {
+      if (error) fail();
+      else succeed();
+    });
   });
 }

@@ -88,8 +88,9 @@ Thread configuration uses optimistic versions and rejects changes during work.
 
 Managed application integrations launch the separate controller executable through
 an exported process client. Startup credentials travel over the child's private
-stdin, never argv. The client writes that request immediately after spawn and does not wait for
-stdin finish or close; compiled Deno pipes may never emit those events, and
+stdin, never argv. The client writes one newline-delimited request after the
+child has spawned, leaves stdin open, and does not wait for stdin finish or
+close; compiled Deno pipes may never emit those events, and
 `readline.close()` does not close stdin. The default
 readiness wait is 60 seconds. Start failures include the readiness cause without
 credentials. A bare executable name is resolved from PATH or `$HOME/.local/bin`.

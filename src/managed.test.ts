@@ -63,6 +63,7 @@ it("resolves a start write after the writable flush without waiting for stdin cl
   expect(Buffer.concat(chunks).toString()).toContain(
     "lapis-ai-controller.managed/1",
   );
+  expect(input.writableEnded).toBe(false);
 });
 
 it("includes the readiness cause when startup times out", async () => {
