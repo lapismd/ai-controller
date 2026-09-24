@@ -281,3 +281,8 @@ It MUST NOT cancel, release execution fences, replay the original prompt or reru
 tools. Scope authorization applies to the prior turn; repeated identical commands
 return the same receipt and differing input conflicts. Preparation rechecks the
 prior outcome and evidence before dispatch.
+
+Metadata-only transcript rows retain the non-content sequence number needed for
+ordered replay. Live replay resolves payloads from volatile capture. After loss
+of volatile payloads, replay MUST report `transcript_unavailable`; it MUST NOT
+return a falsely complete empty history or authorize continuation from it.

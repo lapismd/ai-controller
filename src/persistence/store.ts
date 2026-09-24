@@ -480,7 +480,7 @@ export class ControllerStore {
       data,
     };
     const stored = privatePayload
-      ? { ...event, data: { payloadUnavailable: true } }
+      ? { ...event, data: { payloadUnavailable: true, ...(type === "transcript.event" && data && typeof data === "object" && !Array.isArray(data) && typeof data.sequence === "number" ? { sequence: data.sequence } : {}) } }
       : event;
     const result = this.#db
       .prepare("INSERT INTO events(id,thread_id,body) VALUES(?,?,?)")
@@ -629,10 +629,13 @@ export class ControllerStore {
   }
   replayTranscript(owner: string, threadId: string, afterSequence: number, turnId?: string) {
     this.authorizeThread(owner, threadId);
-    const records = this.#db.prepare("SELECT body FROM events WHERE thread_id=? AND json_extract(body,'$.type')='transcript.event' AND json_extract(body,'$.data.sequence')>? AND (? IS NULL OR json_extract(body,'$.turnId')=?) ORDER BY sequence LIMIT 1001").all(threadId, afterSequence, turnId ?? null, turnId ?? null);
+    const records = this.#db.prepare("SELECT body FROM events WHERE thread_id=? AND json_extract(body,'$.type')='transcript.event' AND COALESCE(json_extract(body,'$.data.sequence'),9223372036854775807)>? AND (? IS NULL OR json_extract(body,'$.turnId')=?) ORDER BY sequence LIMIT 1001").all(threadId, afterSequence, turnId ?? null, turnId ?? null);
     const events = records.slice(0, 1000).map(row => {
       const stored = JSON.parse(String(row.body)) as ControllerEvent;
-      return this.capture.clean((this.#volatileEvents.get(stored.id) ?? stored).data) as unknown as import("../transcript-contracts.js").TranscriptEvent;
+      const data = (this.#volatileEvents.get(stored.id) ?? stored).data;
+      if (data && typeof data === "object" && !Array.isArray(data) && data.payloadUnavailable)
+        throw new ControllerError("transcript_unavailable", "Private transcript content is unavailable after interruption");
+      return this.capture.clean(data) as unknown as import("../transcript-contracts.js").TranscriptEvent;
     });
     return { events, complete: records.length <= 1000, ...(records.length > 1000 ? { nextSequence: events.at(-1)!.sequence } : {}) };
   }

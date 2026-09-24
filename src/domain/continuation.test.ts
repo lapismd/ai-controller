@@ -5,7 +5,7 @@ import type { ExecutionContext } from "./ports.js";
 import { serveController } from "../transport/server.js";
 import { ControllerClient } from "../client.js";
 
-function setup() {
+function setup(payloadPolicy: "durable" | "metadata-only" = "durable") {
   const store = new ControllerStore(":memory:");
   const executions: ExecutionContext[] = [];
   const controller = new Controller(store, new Map([["fixture", {
@@ -16,12 +16,12 @@ function setup() {
       await context.emit({ type: "completed" });
     },
   }]]));
-  const thread = store.createThread("owner", { provider: "fixture", workspace: "repo" });
+  const thread = store.createThread("owner", { provider: "fixture", workspace: "repo", payloadPolicy });
   return { controller, store, thread, executions };
 }
 
-it("starts one linked follow-up with verified context and never repeats the original prompt", async () => {
-  const h = setup();
+it.each(["durable", "metadata-only"] as const)("starts one linked follow-up with verified context under %s and never repeats the original prompt", async payloadPolicy => {
+  const h = setup(payloadPolicy);
   try {
     const parent = h.controller.submit("owner", { threadId: h.thread.id, commandId: "first", text: "Original write request" });
     await h.controller.drain();
