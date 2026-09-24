@@ -1,4 +1,5 @@
 /** Browser-safe, versioned controller contracts. No server or consumer imports. */
+export type { ExecutionPolicy, NativePermissionMode } from "./policy-contracts.js";
 export type { TranscriptEvent, TranscriptPayload, TranscriptAcknowledgment, TranscriptPage, CaptureCoverage, LogicalPath, SanitizationSummary } from "./transcript-contracts.js";
 export const PROTOCOL = "lapis-ai-controller/1";
 export type Json =
@@ -76,6 +77,7 @@ export interface TurnInput {
   externalRef?: string;
 }
 export interface Turn {
+  executionPolicy?: import("./policy-contracts.js").ExecutionPolicy;
   continuedFrom?: string;
   id: string;
   threadId: string;

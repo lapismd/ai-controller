@@ -18,6 +18,7 @@ export interface TranscriptEndpoint {
 }
 
 export type RuntimeEvent =
+  | { type: "execution-policy"; nativeMode: import("../policy-contracts.js").NativePermissionMode }
   | { type: "text"; text: string; sourceId?: string; messageId?: string; complete?: boolean }
   | { type: "activity"; data: Json; sourceId?: string }
   | {

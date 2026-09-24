@@ -14,6 +14,7 @@ import {
   mapApprovalOptionToAcpDecision,
 } from "./compat/acp-event-mapper.js";
 import { rejectedRequestedConfiguration } from "./acp-configure.js";
+import { nativePermissionMode } from "./native-permission-mode.js";
 
 interface ActiveSession {
   sessionId: string;
@@ -154,6 +155,8 @@ export class AcpProvider implements ExecutionProvider {
         throw error;
       }
     }
+    if (preparation.configuration.permissionMode)
+      await context.emit({ type: "execution-policy", nativeMode: nativePermissionMode(this.#executor, session.sessionId, preparation.configuration.permissionMode) });
     const model = preparation.configuration.model;
     const thinking = preparation.configuration.thinking;
     if (thinking && !["off", "low", "medium", "high"].includes(thinking))

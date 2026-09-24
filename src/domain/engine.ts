@@ -20,6 +20,7 @@ import {
 } from "../contracts.js";
 import { ControllerStore } from "../persistence/store.js";
 import { authorizePreparation, bounded, prepareTurn } from "./context.js";
+import { recordExecutionPolicy } from "./execution-policy.js";
 import type {
   ContextSource,
   ExecutionProvider,
@@ -559,6 +560,7 @@ export class Controller {
       };
       await authorizePreparation(thread, preparation, this.#sources, signal);
       signal.throwIfAborted();
+      recordExecutionPolicy(this.store, turn, preparation.configuration);
       await provider.execute({
         thread,
         turn,
@@ -643,6 +645,10 @@ export class Controller {
       return;
     }
     if (isTerminal(turn.state)) return;
+    if (event.type === "execution-policy") {
+      recordExecutionPolicy(this.store, turn, this.store.preparation(turnId)!.configuration, event.nativeMode);
+      return;
+    }
     if (["prepared", "dispatching"].includes(turn.state)) this.store.transition(turnId, "running");
     await this.persistCapture(turn, this.captureFor(turn).accept(event));
     if (event.type === "completed") this.store.transition(turnId, event.outcome ?? "completed");

@@ -1,5 +1,12 @@
 # Architecture
 
+Each prepared turn MUST retain requested and effective approval policy, including
+restricted-session suppression. ACP native mode results MUST remain separate:
+applied, unsupported, rejected or unreported. Status MUST NOT infer native success
+from the requested mode. This metadata survives private payload loss and is
+available in snapshots and the ordered owner journal. Policy metadata MUST NOT
+mark a turn running or enter the public transcript.
+
 Consumer transcript append and replay allow up to 120 seconds for encrypted
 durable storage. Cancellation and disconnect still invalidate the endpoint call;
 an expired append never authorizes provider or tool execution.

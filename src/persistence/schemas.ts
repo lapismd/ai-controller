@@ -71,6 +71,10 @@ const schemas = {
       commandId: string,
       attemptId: string,
       continuedFrom: string,
+      executionPolicy: object({
+        requested: { enum: ["ask", "allow-all"] }, effective: { enum: ["ask", "allow-all"] }, restricted: { type: "boolean" },
+        nativeMode: object({ requested: string, status: { enum: ["applied", "unsupported", "rejected", "unreported"] }, effective: string }, ["requested", "status"]),
+      }, ["requested", "effective", "restricted"]),
       state: {
         enum: [
           "queued",

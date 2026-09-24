@@ -21,8 +21,9 @@ async function run(configuration: ProviderConfig, kind: "approval" | "input" = "
   await controller.drain();
   const interactions = store.interactions(thread.id);
   const state = store.turns(thread.id)[0]!.state;
+  const executionPolicy = store.turns(thread.id)[0]!.executionPolicy;
   await controller.close(); store.close();
-  return { decision, interactions, state };
+  return { decision, interactions, state, executionPolicy };
 }
 it("automatically resolves the exact offered approval and records its policy decision", async () => {
   const result = await run({ approvalPolicy: "allow-all" });
@@ -34,6 +35,7 @@ it.each([{}, { approvalPolicy: "ask" }, { approvalPolicy: "allow-all", restricte
   const result = await run(configuration);
   expect(result.decision).toBeUndefined();
   expect(result.interactions[0]?.state).toBe("expired");
+  expect(result.executionPolicy).toMatchObject({ requested: configuration.approvalPolicy ?? "ask", effective: "ask", restricted: configuration.restricted === true });
 });
 it("does not answer task questions or invent an unoffered approval", async () => {
   expect((await run({ approvalPolicy: "allow-all" }, "input")).decision).toBeUndefined();
