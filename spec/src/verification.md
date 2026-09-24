@@ -33,3 +33,15 @@
 | AIC-CAP-005  | Implemented | src/persistence/sanitization.test.ts raw tool execution and sanitized model results; existing unknown-outcome recovery tests                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | AIC-CAP-006  | Implemented | Group capture-store and Lapis native-memory-service tests cover first index writes and legacy reads; execution location capabilities remain separate                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | AIC-CAP-007  | Implemented | Managed stderr buffers complete EOF with bounded scan; local compiled binary starts its isolated scanner and persists a policy-bearing thread; start does not await stdin finish; start writes resolve without stdin close; start failures include the readiness cause; bare names resolve from PATH or `$HOME/.local/bin`                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+
+Group embedding lifecycle regressions reproduce two unhandled capture rejections
+(read and write) before the fix. Both fail closed after the fix without raw
+writes or additional embedding dispatch. Closing during an in-flight batch also
+prevents later batches and writes before the scanner is disposed.
+
+Validation for the embedding drain repair (2026-09-24): three focused lifecycle
+regressions pass; `pnpm spec:check`, `pnpm check`, `pnpm test` (137 tests), and
+`pnpm build` pass. The packed package passes all 365 enabled Nostr controller
+tests, including its native checkout repair (two opt-in provider/clone tests
+remain skipped in that run). Lapis uses the separate vault-memory profile;
+its implementation is unchanged.

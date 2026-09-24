@@ -91,6 +91,7 @@ export class ControllerMemoryService implements MemoryReader {
   readonly #now: () => number;
   readonly #embeddingQueue = new Set<string>();
   #embeddingDrain?: Promise<void>;
+  #embeddingStopped = false;
 
   constructor(
     store: MemoryStorePort,
@@ -518,6 +519,8 @@ export class ControllerMemoryService implements MemoryReader {
   }
 
   async close(): Promise<void> {
+    this.#embeddingStopped = true;
+    this.#embeddingQueue.clear();
     await this.#embedding?.close();
     await this.#embeddingDrain?.catch(() => undefined);
     this.#capture.close();
@@ -692,15 +695,20 @@ export class ControllerMemoryService implements MemoryReader {
   }
 
   private drainEmbeddings(): void {
-    if (!this.#embedding || this.#embeddingDrain) return;
-    this.#embeddingDrain = this.runEmbeddingQueue().finally(() => {
+    if (!this.#embedding || this.#embeddingDrain || this.#embeddingStopped) return;
+    this.#embeddingDrain = this.runEmbeddingQueue().catch(() => {
+      // The durable pending-document query is the recovery source. A failed
+      // capture boundary cannot safely record another error or retry a batch.
+      this.#embeddingStopped = true;
+      this.#embeddingQueue.clear();
+    }).finally(() => {
       this.#embeddingDrain = undefined;
       if (this.#embeddingQueue.size) this.drainEmbeddings();
     });
   }
 
   private async runEmbeddingQueue(): Promise<void> {
-    while (this.#embedding && this.#embeddingQueue.size) {
+    while (this.#embedding && !this.#embeddingStopped && this.#embeddingQueue.size) {
       const ids = [...this.#embeddingQueue].slice(0, 16);
       ids.forEach((id) => this.#embeddingQueue.delete(id));
       const documents = ids
@@ -711,6 +719,7 @@ export class ControllerMemoryService implements MemoryReader {
         const vectors = await this.#embedding.embed(
           documents.map(({ content }) => content),
         );
+        if (this.#embeddingStopped) return;
         for (const [index, document] of documents.entries()) {
           const vector = vectors[index];
           if (!vector?.length) throw new Error("Embedding result is missing");
@@ -723,7 +732,8 @@ export class ControllerMemoryService implements MemoryReader {
             updatedAt: this.#now(),
           });
         }
-      } catch (error) {
+      } catch {
+        if (this.#embeddingStopped) return;
         for (const document of documents)
           this.store.putSearchEmbeddingError({
             documentId: document.documentId,

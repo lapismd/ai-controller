@@ -298,3 +298,10 @@ Approval-policy provider acceptance is recorded in
 [local policy validation](../../docs/local-policy-validation.md). It distinguishes
 provider decisions and independently verified file effects from inconclusive
 redacted-path probes, browser acceptance and production deployment.
+
+Background group-memory embedding failures MUST be contained before the next
+event-loop turn. If capture or durable error recording fails, the in-memory
+drain halts and leaves unembedded documents in durable pending state for a later
+explicit recovery. It MUST NOT retry against a failed scanner, write raw input,
+or crash the consuming service with an unhandled rejection. Closing memory
+stops queued work before disposing its capture boundary.
