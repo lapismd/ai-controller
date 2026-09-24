@@ -161,6 +161,7 @@ const schemas = {
       deadline: number,
       request: {},
       response: {},
+      resolution: { enum: ["automatic", "owner"] },
     },
     [
       "id",

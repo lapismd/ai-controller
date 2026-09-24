@@ -14,6 +14,8 @@ const config = object({
   model: string,
   agent: string,
   thinking: string,
+  permissionMode: string,
+  approvalPolicy: { enum: ["ask", "allow-all"] },
   options: { type: "object" },
 });
 const stringArray = { type: "array", items: string, maxItems: 100 };

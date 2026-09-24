@@ -99,6 +99,7 @@ export class AcpProvider implements ExecutionProvider {
       mcpServers: context.mcpServers ?? [],
       restricted: preparation.configuration.restricted ?? false,
       vcsIdentity: preparation.configuration.vcsIdentity,
+      permissionMode: preparation.configuration.permissionMode,
     });
     if (session && session.manifest !== manifest) {
       await this.#executor.closeAcpSession(session.sessionId);
@@ -271,14 +272,14 @@ export class AcpProvider implements ExecutionProvider {
               "approval",
               nativeId,
               normalized as unknown as Json,
-              Date.now() + 15 * 60_000,
+              typeof request.expiresAt === "number" ? request.expiresAt : Date.now() + 15 * 60_000,
             )
             .then(
               (value) =>
                 this.#executor.respondAcpSession(
                   frame.sessionId,
                   nativeId,
-                  mapApprovalOptionToAcpDecision(String(value)),
+                  mapApprovalOptionToAcpDecision(String(value), normalized.options),
                 ),
               () =>
                 this.#executor.respondAcpSession(

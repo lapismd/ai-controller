@@ -251,14 +251,17 @@ export function mapAcpPermissionRequest(
         }
       : {}),
     ...(path ? { details: { path } } : {}),
-    options: options.length > 0 ? options : DEFAULT_APPROVAL_OPTIONS,
+    options,
   };
 }
 
 export function mapApprovalOptionToAcpDecision(
   optionId: string,
+  offered?: ApprovalOption[],
 ): AcpPermissionDecision {
-  switch (optionId) {
+  const selected = offered?.find(option => option.id === optionId);
+  if (offered && !selected) throw new Error("Approval option was not offered");
+  switch (selected?.kind ?? optionId) {
     case "allow-always":
     case "allow_always":
       return { outcome: "allow_always" };
@@ -274,8 +277,11 @@ export function mapApprovalOptionToAcpDecision(
       return { outcome: "reject_always" };
     case "cancel":
       return { outcome: "cancel" };
-    default:
+    case "allow-once":
+    case "allow_once":
       return { outcome: "allow_once" };
+    default:
+      throw new Error("Unsupported ACP approval option");
   }
 }
 
@@ -332,25 +338,18 @@ function mapApprovalKind(kind: string | undefined): ApprovalKind {
 }
 
 function normalizeOptionKind(value: string): ApprovalOption["kind"] {
-  const normalized = value.replaceAll("_", "-");
-  if (
-    normalized === "allow-once" ||
-    normalized === "allow-always" ||
-    normalized === "deny-once" ||
-    normalized === "deny-always"
-  ) {
-    return normalized;
+  switch (value.replaceAll("_", "-")) {
+    case "allow-once": return "allow-once";
+    case "allow-always": return "allow-always";
+    case "reject-once": case "deny-once": return "deny-once";
+    case "reject-always": case "deny-always": return "deny-always";
+    default: return "unknown";
   }
-  if (normalized.includes("always") && normalized.includes("deny")) {
-    return "deny-always";
-  }
-  if (normalized.includes("always")) return "allow-always";
-  if (normalized.includes("deny")) return "deny-once";
-  return "allow-once";
 }
 
 function labelForKind(kind: ApprovalOption["kind"]): string {
   switch (kind) {
+    case "unknown": return "Unsupported option";
     case "allow-always":
       return "Allow always";
     case "deny-once":

@@ -255,3 +255,12 @@ reads before derivation. Browser defaults expose portable detector coverage;
 consumers can inject an explicit enforcement adapter. Raw authorized evidence
 read arguments stay in the execution path. Transformed evidence locations fail
 closed instead of becoming file capabilities. Redacted candidates are rejected.
+
+Generic approval policy is `ask` (the default for omitted values) or `allow-all`,
+independent of provider-specific permission modes. Allow all resolves only offered
+execution approvals, preserving their exact IDs and recording an automatic decision.
+Structured task input and restricted sessions never inherit automatic approval.
+Each turn uses its durable prepared configuration; changes apply to later turns.
+ACP permissions preserve the host deadline rather than extending its lifetime.
+Permission resolution must not move a completed, cancelled or failed turn back to
+running, and concurrent requests leave the turn waiting until all are resolved.

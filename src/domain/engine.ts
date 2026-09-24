@@ -1,3 +1,4 @@
+import { automaticApproval } from "./approval-policy.js";
 import { assertTranscript } from "../capture/validation.js";
 import { CaptureSession, type Captured } from "../capture/session.js";
 import type { TranscriptEndpoint } from "./ports.js";
@@ -327,7 +328,7 @@ export class Controller {
     });
     this.schedule();
   }
-  respond(owner: string, id: string, response: Json): void {
+  respond(owner: string, id: string, response: Json, resolution: "owner" | "automatic" = "owner"): void {
     const interaction = this.store.interaction(id);
     if (!interaction)
       throw new ControllerError("not_found", "Interaction not found");
@@ -375,7 +376,7 @@ export class Controller {
         "Tool results use the executor endpoint",
       );
     response = this.store.capture.clean(response);
-    this.store.putInteraction({ ...interaction, state: "resolved", response });
+    this.store.putInteraction({ ...interaction, state: "resolved", response, resolution });
     this.#responses.delete(id);
     waiting.resolve(response);
   }
@@ -637,12 +638,14 @@ export class Controller {
   ): Promise<Json> {
     await this.persistCapture(turn, this.captureFor(turn).completeBlock());
     request = this.store.capture.clean(request);
+    const automatic = automaticApproval(this.store.preparation(turn.id)?.configuration ?? {}, kind, request);
     const interaction: Interaction = {
       id: randomUUID(),
       threadId: thread.id,
       turnId: turn.id,
       nativeId,
       kind,
+      ...(automatic !== undefined ? { resolution: "automatic" as const } : {}),
       request,
       state: "pending",
       deadline,
@@ -654,13 +657,19 @@ export class Controller {
     this.store.putInteraction(interaction);
     this.store.transition(turn.id, "waiting");
     try {
+      if (automatic !== undefined && !signal.aborted && deadline > Date.now()) {
+        this.respond(thread.owner, interaction.id, automatic, "automatic");
+      }
       const value = await bounded(
         response,
         Math.max(0, deadline - Date.now()),
         signal,
       );
       await this.persistCapture(turn, [this.captureFor(turn).record({ kind: kind === "approval" ? "permission" : "input", interactionId: interaction.id, request, response: value, state: "resolved" })]);
-      this.store.transition(turn.id, "running");
+      const current = this.store.turn(turn.id)!;
+      if (!isTerminal(current.state) && !current.cancelRequested &&
+          !this.store.interactions(thread.id).some(item => item.turnId === turn.id && item.state === "pending"))
+        this.store.transition(turn.id, "running");
       return value;
     } finally {
       this.#responses.delete(interaction.id);

@@ -23,7 +23,9 @@ export const TERMINAL_STATES: readonly TurnState[] = [
   "submission-unknown",
   "interrupted",
 ];
+export type ApprovalPolicy = "ask" | "allow-all";
 export type ProviderConfig = {
+  approvalPolicy?: ApprovalPolicy;
   vcsIdentity?: { name: string; email: string };
   restricted?: boolean;
   model?: string;
@@ -149,6 +151,7 @@ export interface Interaction {
   nativeId: string;
   request: Json;
   response?: Json;
+  resolution?: "automatic" | "owner";
   deadline: number;
 }
 export interface Capabilities {

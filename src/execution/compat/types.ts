@@ -102,7 +102,7 @@ export type AgentTurnOptions = {
 export type ApprovalKind = "read" | "write" | "execute" | "network" | "other";
 
 export type ApprovalOptionKind =
-  "allow-once" | "allow-session" | "allow-always" | "deny-once" | "deny-always";
+  "allow-once" | "allow-session" | "allow-always" | "deny-once" | "deny-always" | "unknown";
 
 export type ApprovalOption = {
   id: string;

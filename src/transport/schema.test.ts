@@ -7,3 +7,10 @@ it("validates the VCS identity while rejecting arbitrary environment injection",
   for (const identity of [{ name: "Nyra\nOther", email: "a@b" }, { name: "", email: "a@b" }, { name: "Nyra", email: "a@b", env: { SECRET: "bad" } }])
     expect(() => validateRequest("threads.create", request(identity))).toThrow();
 });
+
+it("accepts a generic approval policy separately from the native mode", () => {
+  const request = (approvalPolicy: string) => ({ provider: "codex", workspace: "repo", configuration: { approvalPolicy, permissionMode: "native-mode" } });
+  expect(() => validateRequest("threads.create", request("allow-all"))).not.toThrow();
+  expect(() => validateRequest("threads.create", request("ask"))).not.toThrow();
+  expect(() => validateRequest("threads.create", request("invented"))).toThrow();
+});
