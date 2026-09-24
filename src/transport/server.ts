@@ -510,6 +510,8 @@ function dispatch(
       return store.threads(owner).filter(allowed);
     case "threads.snapshot":
       return store.snapshot(owner, String(p.threadId));
+    case "turns.continue":
+      return controller.continueTurn(owner, p as unknown as import("../contracts.js").ContinueInput);
     case "turns.submit":
       return controller.submit(owner, p as unknown as TurnInput);
     case "turns.get":

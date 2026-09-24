@@ -271,3 +271,13 @@ when capture is awaiting durable acknowledgement; replay never opens another
 approval. Turn completion cannot be changed by late interaction registration.
 The ACP adapter drains settlement handlers without retrying a decision already
 settled by the host.
+
+Continuation uses `turns.continue` with the exact prior turn and a new idempotent
+command identity. It creates a linked attempt in the same thread with newly
+authored instructions, verified sanitized transcript evidence and current
+configuration. It MUST reject running, interrupted or submission-unknown work,
+pending interactions, unknown tool effects and unavailable metadata-only history.
+It MUST NOT cancel, release execution fences, replay the original prompt or rerun
+tools. Scope authorization applies to the prior turn; repeated identical commands
+return the same receipt and differing input conflicts. Preparation rechecks the
+prior outcome and evidence before dispatch.

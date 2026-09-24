@@ -1,3 +1,4 @@
+import { continuationTarget, continuationContext } from "./continuation.js";
 import { InteractionLifecycle } from "./interaction-lifecycle.js";
 import { automaticApproval } from "./approval-policy.js";
 import { assertTranscript } from "../capture/validation.js";
@@ -252,10 +253,18 @@ export class Controller {
       if (this.#tools.get(key) === endpoint) this.#tools.delete(key);
     };
   }
+  continueTurn(owner: string, input: import("../contracts.js").ContinueInput): Receipt {
+    const parent = continuationTarget(this.store, owner, input);
+    return this.submit(owner, { threadId: parent.threadId, commandId: input.commandId, text: input.text, continuedFrom: parent.id });
+  }
   submit(owner: string, input: TurnInput): Receipt {
     if (this.#closing)
       throw new ControllerError("stopping", "Controller is stopping");
     const thread = this.store.authorizeThread(owner, input.threadId);
+    if (input.continuedFrom) {
+      const parent = continuationTarget(this.store, owner, { turnId: input.continuedFrom, commandId: input.commandId, text: input.text });
+      if (parent.threadId !== thread.id) throw new ControllerError("continuation_scope_mismatch", "Continuation must remain in its original thread");
+    }
     const provider = this.providers.get(thread.provider);
     if (!provider)
       throw new ControllerError(
@@ -465,6 +474,11 @@ export class Controller {
       if (!preparation) {
         this.store.transition(turn.id, "preparing");
         preparation = this.store.capture.clean(await prepareTurn(thread, turn, this.#sources, signal));
+        if (turn.continuedFrom) {
+          continuationTarget(this.store, thread.owner, { turnId: turn.continuedFrom, commandId: turn.commandId, text: turn.text ?? "" });
+          const blocks = await continuationContext(thread, turn, (sequence, parent) => this.replayTranscript(thread.owner, thread.id, sequence, parent));
+          preparation = this.store.capture.clean({ ...preparation, blocks: [...blocks, ...preparation.blocks] });
+        }
         this.store.prepare(turn.id, preparation);
       }
       const mcpEndpoint = thread.mcpEndpoint

@@ -76,6 +76,7 @@ const schemas: Record<string, object> = {
     },
     ["threadId", "commandId", "text"],
   ),
+  "turns.continue": object({ turnId: string, commandId: string, text: { type: "string", minLength: 1, maxLength: 1_000_000 } }, ["turnId", "commandId", "text"]),
   "turns.get": object({ turnId: string }, ["turnId"]),
   "turns.cancel": object({ turnId: string }, ["turnId"]),
   "turns.resolve": object(

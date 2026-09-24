@@ -19,6 +19,7 @@ export const RPC_REQUIRED_SCOPES = {
   "threads.snapshot": "threads:read",
   "threads.configure": "providers:configure",
   "turns.submit": "threads:operate",
+  "turns.continue": "threads:operate",
   "turns.get": "threads:read",
   "turns.cancel": "threads:operate",
   "turns.resolve": "threads:operate",

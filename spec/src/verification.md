@@ -4,7 +4,7 @@
 | --- | --- | --- |
 | AIC-CORE-001 | Implemented | src/persistence/store.test.ts; src/domain/engine.test.ts |
 | AIC-CORE-002 | Implemented | src/domain/engine.test.ts; workspace identifier serialization |
-| AIC-CORE-003 | Implemented | src/persistence/store.test.ts; conservative unknown and interruption states |
+| AIC-CORE-003 | Implemented | Continuation regressions cover idempotent linked attempts, new instructions, verified progress, exact ownership and rejection of uncertain execution or tool effects. src/persistence/store.test.ts; conservative unknown and interruption states |
 | AIC-CORE-004 | Implemented | src/persistence/store.test.ts; src/transport/server.test.ts |
 | AIC-CORE-005 | Implemented | src/persistence/store.test.ts; private command, output, preparation, tool payloads and diagnostic exceptions |
 | AIC-CORE-006 | Implemented | src/service.test.ts; src/persistence/store.test.ts; src/runtime.test.ts restricted reattachment; execution ACP identity/session-boundary tests; ACP configure helper tests keep host-invented unsupported thinking non-fatal and fail closed only for requested fields; transport server read/write capture callback ordering and disconnect tests |

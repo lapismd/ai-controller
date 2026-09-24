@@ -84,6 +84,9 @@ export class ControllerClient {
   submit(input: TurnInput): Promise<Receipt> {
     return this.request("turns.submit", input);
   }
+  continueTurn(input: import("./contracts.js").ContinueInput): Promise<Receipt> {
+    return this.request("turns.continue", input);
+  }
   getTurn(turnId: string): Promise<Turn> {
     return this.request("turns.get", { turnId });
   }

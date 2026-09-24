@@ -62,7 +62,13 @@ export interface ContentPart {
   uri?: string;
   mimeType?: string;
 }
+export interface ContinueInput {
+  turnId: string;
+  commandId: string;
+  text: string;
+}
 export interface TurnInput {
+  continuedFrom?: string;
   threadId: string;
   commandId: string;
   text: string;
@@ -70,6 +76,7 @@ export interface TurnInput {
   externalRef?: string;
 }
 export interface Turn {
+  continuedFrom?: string;
   id: string;
   threadId: string;
   commandId: string;

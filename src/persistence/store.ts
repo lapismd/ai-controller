@@ -297,6 +297,7 @@ export class ControllerStore {
         parts: input.parts,
         output: "",
         externalRef: input.externalRef,
+        ...(input.continuedFrom ? { continuedFrom: input.continuedFrom } : {}),
         cancelRequested: false,
         createdAt: now,
         updatedAt: now,

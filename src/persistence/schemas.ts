@@ -70,6 +70,7 @@ const schemas = {
       id: string,
       commandId: string,
       attemptId: string,
+      continuedFrom: string,
       state: {
         enum: [
           "queued",
