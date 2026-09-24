@@ -24,6 +24,8 @@ interface ActiveSession {
   resolve?(): void;
   reject?(error: Error): void;
   queued: number;
+  interactions: Map<string, Promise<void>>;
+  settledInteractions: Set<string>;
 }
 export class AcpProvider implements ExecutionProvider {
   readonly capabilities: Capabilities = {
@@ -116,6 +118,7 @@ export class AcpProvider implements ExecutionProvider {
         manifest,
         ingest: Promise.resolve(),
         queued: 0,
+        interactions: new Map(), settledInteractions: new Set(),
       };
       this.#sessions.set(thread.id, session);
       if (context.tools.length) {
@@ -174,6 +177,7 @@ export class AcpProvider implements ExecutionProvider {
         throw new ControllerError("unsupported_configuration", rejected.reason);
     }
     session.context = context;
+    session.settledInteractions.clear();
     const completion = new Promise<void>((resolve, reject) => {
       session!.resolve = resolve;
       session!.reject = reject;
@@ -266,8 +270,14 @@ export class AcpProvider implements ExecutionProvider {
         if (frame.event.type === "permission") {
           const request = frame.event.request ?? {};
           const nativeId = String(request.requestId ?? request.id ?? "");
+          if (["resolved", "expired", "cancelled"].includes(String(request.state))) {
+            session.settledInteractions.add(nativeId);
+            if (request.state !== "resolved") await context.emit({ type: "interaction-settled", nativeId, state: request.state as "expired" | "cancelled" });
+            return;
+          }
+          if (session.settledInteractions.has(nativeId) || session.interactions.has(nativeId)) return;
           const normalized = mapAcpPermissionRequest(request);
-          void context
+          const interaction = context
             .interact(
               "approval",
               nativeId,
@@ -276,13 +286,13 @@ export class AcpProvider implements ExecutionProvider {
             )
             .then(
               (value) =>
-                this.#executor.respondAcpSession(
+                session.settledInteractions.has(nativeId) ? undefined : this.#executor.respondAcpSession(
                   frame.sessionId,
                   nativeId,
                   mapApprovalOptionToAcpDecision(String(value), normalized.options),
                 ),
               () =>
-                this.#executor.respondAcpSession(
+                session.settledInteractions.has(nativeId) ? undefined : this.#executor.respondAcpSession(
                   frame.sessionId,
                   nativeId,
                   "cancel",
@@ -295,7 +305,8 @@ export class AcpProvider implements ExecutionProvider {
                   "Provider approval is no longer live",
                 ),
               ),
-            );
+            ).finally(() => session.interactions.delete(nativeId));
+          session.interactions.set(nativeId, interaction);
           return;
         }
         const event = frame.event.event ?? {};
@@ -320,9 +331,11 @@ export class AcpProvider implements ExecutionProvider {
             outcome:
               event.stopReason === "cancelled" ? "cancelled" : "completed",
           });
+          await this.settleOutstanding(session, context);
           session.resolve?.();
         } else if (type === "error" || frame.event.type === "closed") {
           await context.emit({ type: "failed", code: "provider_failed" });
+          await this.settleOutstanding(session, context);
           session.resolve?.();
         } else
           await context.emit({
@@ -345,6 +358,14 @@ export class AcpProvider implements ExecutionProvider {
       .finally(() => {
         session.queued--;
       });
+  }
+  private async settleOutstanding(session: ActiveSession, context: ExecutionContext): Promise<void> {
+    for (const id of session.interactions.keys()) {
+      if (session.settledInteractions.has(id)) continue;
+      session.settledInteractions.add(id);
+      await context.emit({ type: "interaction-settled", nativeId: id, state: "cancelled" });
+    }
+    await Promise.allSettled(session.interactions.values());
   }
   private async tool(call: ToolBridgeCall): Promise<void> {
     const session = this.#sessions.get(call.bindingId);

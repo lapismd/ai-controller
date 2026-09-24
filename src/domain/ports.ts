@@ -27,6 +27,7 @@ export type RuntimeEvent =
       deadline: number;
     }
   | { type: "completed"; outcome?: "completed" | "cancelled" }
+  | { type: "interaction-settled"; nativeId: string; state: "expired" | "cancelled" }
   | { type: "failed"; code: string };
 export interface ExecutionContext {
   mcpServers?: McpServerContribution[];

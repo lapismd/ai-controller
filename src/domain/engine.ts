@@ -1,3 +1,4 @@
+import { InteractionLifecycle } from "./interaction-lifecycle.js";
 import { automaticApproval } from "./approval-policy.js";
 import { assertTranscript } from "../capture/validation.js";
 import { CaptureSession, type Captured } from "../capture/session.js";
@@ -62,6 +63,7 @@ export class Controller {
     string,
     { promise: Promise<void>; abort: AbortController; workspace: string }
   >();
+  readonly #interactionLifecycle = new InteractionLifecycle();
   readonly #responses = new Map<
     string,
     { resolve(value: Json): void; reject(error: Error): void }
@@ -605,7 +607,7 @@ export class Controller {
     } finally {
       try { await this.persistCapture(turn, this.captureFor(turn).finish("interrupted")); }
       catch { this.store.append(thread.id, "capture.gap", { reason: "capture_acknowledgment_unavailable" }, turn.id, `${turn.attemptId}:gap`, true); }
-      finally { this.#captures.delete(turn.id); }
+      finally { this.#captures.delete(turn.id); this.#interactionLifecycle.clear(turn.id); }
       for (const interaction of this.store.interactions(thread.id))
         if (interaction.turnId === turn.id && interaction.state === "pending") {
           this.store.putInteraction({
@@ -621,6 +623,11 @@ export class Controller {
   }
   private async ingest(turnId: string, event: RuntimeEvent): Promise<void> {
     const turn = this.store.turn(turnId)!;
+    if (event.type === "interaction-settled") {
+      this.#interactionLifecycle.settle(this.store, turn, event.nativeId, event.state,
+        (id, error) => this.#responses.get(id)?.reject(error));
+      return;
+    }
     if (isTerminal(turn.state)) return;
     if (["prepared", "dispatching"].includes(turn.state)) this.store.transition(turnId, "running");
     await this.persistCapture(turn, this.captureFor(turn).accept(event));
@@ -653,7 +660,14 @@ export class Controller {
     const response = new Promise<Json>((resolve, reject) => {
       this.#responses.set(interaction.id, { resolve, reject });
     });
+    void response.catch(() => {});
     await this.persistCapture(turn, [this.captureFor(turn).record({ kind: kind === "approval" ? "permission" : "input", interactionId: interaction.id, request, state: "pending" })]);
+    const settled = this.#interactionLifecycle.state(turn.id, nativeId);
+    if (settled || isTerminal(this.store.turn(turn.id)!.state) || signal.aborted) {
+      this.#responses.delete(interaction.id);
+      this.store.putInteraction({ ...interaction, state: settled ?? "cancelled" });
+      throw this.#interactionLifecycle.error();
+    }
     this.store.putInteraction(interaction);
     this.store.transition(turn.id, "waiting");
     try {

@@ -264,3 +264,10 @@ Each turn uses its durable prepared configuration; changes apply to later turns.
 ACP permissions preserve the host deadline rather than extending its lifetime.
 Permission resolution must not move a completed, cancelled or failed turn back to
 running, and concurrent requests leave the turn waiting until all are resolved.
+
+Host permission settlement is a typed execution event bound to the exact native
+interaction and turn. Expired or cancelled host requests remain terminal even
+when capture is awaiting durable acknowledgement; replay never opens another
+approval. Turn completion cannot be changed by late interaction registration.
+The ACP adapter drains settlement handlers without retrying a decision already
+settled by the host.
