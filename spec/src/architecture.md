@@ -140,7 +140,8 @@ Building alone still does not install or start a service.
 Production source already lives under `auth`, `capture`, `cli`, `domain`,
 `execution`, `memory`, `persistence`, and `transport`. Domain turn execution,
 transcript capture, and endpoint registration live as named modules under
-`src/domain/`. Lapis memory episode
+`src/domain/`. Persistence, transport dispatch, and client snapshot helpers
+are also named modules beside those facades. Lapis memory episode
 documents, search ranking, ingest, inspect, forget, and consolidation live as named
 modules under `src/memory/lapis/`. Group memory search, claims, and lifecycle
 live as named modules under `src/memory/group/`. Residual root files are

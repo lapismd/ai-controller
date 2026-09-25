@@ -1,6 +1,6 @@
 # TypeScript architecture and enforcement
 
-**Status:** P0 landed (`wrutmqys`). Extract in progress. Canonical requirements live in `spec/src`.
+**Status:** P0 and extract landed. Canonical requirements live in `spec/src`.
 
 **Kind of statements:** **Fact** is observed in this checkout. **Recommendation**
 is a chosen policy. Organisation plans under `docs/plans/` are not canonical.
@@ -56,7 +56,9 @@ src/
   300 counted lines. Lapis native memory now delegates ingest, search, inspect,
   forget, and consolidation to named modules. Group memory search, claims, and
   lifecycle are extracted. Domain execution, transcript, and endpoint
-  registration are extracted.
+  registration are extracted. Persistence, transport dispatch, and client
+  snapshot helpers are extracted. Remaining oversize (`runtime`, ACP/Codex
+  adapters, CLI) stays baselined debt.
 
 ## Import matrix (summary)
 

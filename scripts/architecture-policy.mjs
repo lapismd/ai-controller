@@ -35,6 +35,11 @@ export const FILE_LAYER = {
   "src/policy-contracts.ts": "contracts",
   "src/transcript-contracts.ts": "contracts",
   "src/client.ts": "client",
+  "src/client-apply.ts": "client",
+  "src/client-host.ts": "client",
+  "src/client-snapshot.ts": "client",
+  "src/client-subscribe.ts": "client",
+  "src/client-transport.ts": "client",
   "src/runtime.ts": "runtime",
   "src/managed.ts": "runtime",
 };

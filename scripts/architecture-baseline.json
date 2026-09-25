@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "sourceCommit": "112d05c9465ac8462df79b6810738063c4c15a72",
+  "sourceCommit": "b6af5aa3455f19411aaf28ac0573bb81134700ad",
   "limits": {
     "newProductionCountedLines": 300,
     "newTestCountedLines": 500,
@@ -18,8 +18,8 @@
       "forbiddenImportCount": 0
     },
     "scripts/architecture-policy.mjs": {
-      "countedLines": 215,
-      "physicalLines": 250,
+      "countedLines": 220,
+      "physicalLines": 255,
       "forbiddenImportCount": 0
     },
     "scripts/architecture-scan.mjs": {
@@ -181,12 +181,35 @@
       "physicalLines": 44,
       "forbiddenImportCount": 0
     },
+    "src/client-apply.ts": {
+      "countedLines": 33,
+      "physicalLines": 35,
+      "forbiddenImportCount": 0
+    },
+    "src/client-host.ts": {
+      "countedLines": 53,
+      "physicalLines": 58,
+      "forbiddenImportCount": 0
+    },
+    "src/client-snapshot.ts": {
+      "countedLines": 71,
+      "physicalLines": 73,
+      "forbiddenImportCount": 0
+    },
+    "src/client-subscribe.ts": {
+      "countedLines": 131,
+      "physicalLines": 135,
+      "forbiddenImportCount": 0
+    },
+    "src/client-transport.ts": {
+      "countedLines": 242,
+      "physicalLines": 249,
+      "forbiddenImportCount": 0
+    },
     "src/client.ts": {
-      "countedLines": 580,
-      "physicalLines": 586,
-      "forbiddenImportCount": 0,
-      "kind": "legacy",
-      "justification": "Public ./client facade; split snapshot and subscription helpers"
+      "countedLines": 168,
+      "physicalLines": 179,
+      "forbiddenImportCount": 0
     },
     "src/contracts.ts": {
       "countedLines": 283,
@@ -747,17 +770,75 @@
       "physicalLines": 205,
       "forbiddenImportCount": 0
     },
+    "src/persistence/store-codec.ts": {
+      "countedLines": 39,
+      "physicalLines": 44,
+      "forbiddenImportCount": 0
+    },
+    "src/persistence/store-cursors.ts": {
+      "countedLines": 20,
+      "physicalLines": 22,
+      "forbiddenImportCount": 0
+    },
+    "src/persistence/store-events.ts": {
+      "countedLines": 225,
+      "physicalLines": 232,
+      "forbiddenImportCount": 0
+    },
+    "src/persistence/store-host.ts": {
+      "countedLines": 20,
+      "physicalLines": 21,
+      "forbiddenImportCount": 0
+    },
+    "src/persistence/store-interactions.ts": {
+      "countedLines": 39,
+      "physicalLines": 40,
+      "forbiddenImportCount": 0
+    },
+    "src/persistence/store-records.ts": {
+      "countedLines": 110,
+      "physicalLines": 120,
+      "forbiddenImportCount": 0
+    },
+    "src/persistence/store-recover.ts": {
+      "countedLines": 58,
+      "physicalLines": 60,
+      "forbiddenImportCount": 0
+    },
+    "src/persistence/store-session-row.ts": {
+      "countedLines": 13,
+      "physicalLines": 13,
+      "forbiddenImportCount": 0
+    },
+    "src/persistence/store-sessions.ts": {
+      "countedLines": 78,
+      "physicalLines": 83,
+      "forbiddenImportCount": 0
+    },
+    "src/persistence/store-threads.ts": {
+      "countedLines": 114,
+      "physicalLines": 117,
+      "forbiddenImportCount": 0
+    },
+    "src/persistence/store-transaction.ts": {
+      "countedLines": 46,
+      "physicalLines": 48,
+      "forbiddenImportCount": 0
+    },
+    "src/persistence/store-turns.ts": {
+      "countedLines": 173,
+      "physicalLines": 177,
+      "forbiddenImportCount": 0
+    },
     "src/persistence/store.test.ts": {
       "countedLines": 179,
       "physicalLines": 181,
       "forbiddenImportCount": 0
     },
     "src/persistence/store.ts": {
-      "countedLines": 806,
-      "physicalLines": 810,
-      "forbiddenImportCount": 0,
-      "kind": "legacy",
-      "justification": "SQLite store facade; split by durable concern"
+      "countedLines": 268,
+      "physicalLines": 275,
+      "forbiddenImportCount": 0
     },
     "src/policy-contracts.ts": {
       "countedLines": 11,
@@ -806,6 +887,26 @@
       "physicalLines": 167,
       "forbiddenImportCount": 0
     },
+    "src/transport/server-dispatch.ts": {
+      "countedLines": 199,
+      "physicalLines": 201,
+      "forbiddenImportCount": 0
+    },
+    "src/transport/server-register-tools.ts": {
+      "countedLines": 195,
+      "physicalLines": 197,
+      "forbiddenImportCount": 0
+    },
+    "src/transport/server-register.ts": {
+      "countedLines": 162,
+      "physicalLines": 163,
+      "forbiddenImportCount": 0
+    },
+    "src/transport/server-validate.ts": {
+      "countedLines": 28,
+      "physicalLines": 30,
+      "forbiddenImportCount": 0
+    },
     "src/transport/server.test.ts": {
       "countedLines": 743,
       "physicalLines": 747,
@@ -814,11 +915,9 @@
       "justification": "Transport contract suite; split with extracted host surfaces"
     },
     "src/transport/server.ts": {
-      "countedLines": 601,
-      "physicalLines": 603,
-      "forbiddenImportCount": 0,
-      "kind": "legacy",
-      "justification": "WebSocket host facade; split dispatch from serve"
+      "countedLines": 206,
+      "physicalLines": 208,
+      "forbiddenImportCount": 0
     },
     "src/transport/transcript.test.ts": {
       "countedLines": 56,

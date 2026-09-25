@@ -1,34 +1,24 @@
-import { assertTranscript } from "../capture/validation.js";
-import { validateMcpServers } from "../domain/mcp.js";
 import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
-import { WebSocketServer, type WebSocket } from "ws";
+import { WebSocketServer } from "ws";
 import {
   ControllerError,
   PROTOCOL,
   type AuthSession,
-  type ContextBlock,
   type Json,
-  type Principal,
-  type ThreadInput,
-  type Thread,
-  type ToolDefinition,
-  type ToolResult,
-  type TurnInput,
-  type Turn,
 } from "../contracts.js";
 import { Controller } from "../domain/engine.js";
 import { EndpointRegistry } from "./endpoints.js";
 import { validateRequest } from "./schema.js";
-import type { MemoryCandidate, MemoryProfile } from "../memory/recall.js";
 import { AuthSessionStore } from "../auth/session.js";
-import { requireScope } from "../auth/scopes.js";
-import { requireResource } from "../auth/authorize.js";
+import { dispatch } from "./server-dispatch.js";
+import { registerSocketEndpoint } from "./server-register.js";
 
 export interface ServerCredential {
   token: string;
-  principal: Principal;
+  principal: import("../contracts.js").Principal;
 }
+
 export async function serveController(
   controller: Controller,
   options: { credentials: ServerCredential[]; bind?: string; port?: number },
@@ -130,7 +120,6 @@ export async function serveController(
             const replay = after
               ? controller.store.events(owner, threadId, after, 1000)
               : [];
-            // A snapshot is always the current authoritative barrier; replay is an optional diagnostic page.
             subscriptions.set(
               threadId,
               controller.store.onEvent((event) => {
@@ -148,196 +137,17 @@ export async function serveController(
             registrations.delete(id);
           },
           register(input) {
-            const endpointId = String(input.id);
-            registrations.get(endpointId)?.();
-            const unregister = endpoints.register(
+            const registered = registerSocketEndpoint(
+              controller,
+              endpoints,
               owner,
               applicationId,
-              endpointId,
               connectionId,
-              (request) => send({ type: "endpoint.request", request }),
-              (id) => send({ type: "endpoint.cancel", id }),
+              send,
+              input,
             );
-            const disposers = [unregister];
-            const call = (
-              operation: string,
-              payload: Json,
-              signal?: AbortSignal,
-            ) =>
-              endpoints.request(
-                owner,
-                applicationId,
-                endpointId,
-                operation,
-                payload,
-                operation === "tool.execute" || operation.startsWith("transcript.") ? 120_000 : 5000,
-                signal,
-              );
-            try {
-              if (input.mcp)
-                disposers.push(
-                  controller.registerMcp(
-                    owner,
-                    endpointId,
-                    {
-                    resolve: async (thread, signal) => {
-                      const value = await call(
-                        "mcp.resolve",
-                        { thread: thread as unknown as Json },
-                        signal,
-                      );
-                      validateMcpServers(value);
-                      return value;
-                    },
-                    },
-                    applicationId,
-                  ),
-                );
-              if (input.memory)
-                disposers.push(
-                  controller.registerMemory(owner, endpointId, {
-                    profile: (input.memory as { profile: MemoryProfile })
-                      .profile,
-                    candidates: async (thread, query, signal) => {
-                      const value = await call(
-                        "memory.candidates",
-                        {
-                          thread: thread as unknown as Json,
-                          query,
-                        },
-                        signal,
-                      );
-                      if (
-                        !Array.isArray(value) ||
-                        value.length > 40 ||
-                        value.some((item) => !validCandidate(item))
-                      )
-                        throw new ControllerError(
-                          "invalid_memory",
-                          "Memory candidate response is invalid",
-                        );
-                      return value as unknown as MemoryCandidate[];
-                    },
-                    authorize: async (thread, refs, signal) =>
-                      (await call(
-                        "memory.authorize",
-                        {
-                          thread: thread as unknown as Json,
-                          refs: refs as unknown as Json,
-                        },
-                        signal,
-                      )) === true,
-                    read: (thread, operation, input, signal) =>
-                      call(
-                        `memory.${operation}`,
-                        {
-                          thread: thread as unknown as Json,
-                          input,
-                        },
-                        signal,
-                      ),
-                  }, applicationId),
-                );
-              if (input.context)
-                disposers.push(
-                  controller.registerContext(owner, endpointId, {
-                    required: input.required === true,
-                    resolve: async (thread, turn, signal) => {
-                      const value = await call(
-                        "context.resolve",
-                        {
-                          thread: thread as unknown as Json,
-                          turn: turn as unknown as Json,
-                        },
-                        signal,
-                      );
-                      if (
-                        !Array.isArray(value) ||
-                        value.some((block) => !validContext(block))
-                      )
-                        throw new ControllerError(
-                          "invalid_context",
-                          "Context response is invalid",
-                        );
-                      return value as unknown as ContextBlock[];
-                    },
-                    authorize: async (thread, blocks, signal) =>
-                      (await call(
-                        "context.authorize",
-                        {
-                          thread: thread as unknown as Json,
-                          blocks: blocks as unknown as Json,
-                        },
-                        signal,
-                      )) === true,
-                  }, applicationId),
-                );
-              if (input.transcript === true)
-                disposers.push(controller.registerTranscript(owner, endpointId, {
-                  append: async (thread, event) => {
-                    const response = await call("transcript.append", { threadId: thread.id, workspaceId: thread.workspace, event: event as unknown as Json });
-                    if (!response || typeof response !== "object" || Array.isArray(response) || response.durable !== true || response.eventId !== event.id || response.sequence !== event.sequence)
-                      throw new ControllerError("transcript_unacknowledged", "Transcript endpoint did not acknowledge durable capture");
-                    return { eventId: event.id, sequence: event.sequence, durable: true };
-                  },
-                  replay: async (thread, afterSequence, turnId) => {
-                    const response = await call("transcript.replay", { threadId: thread.id, workspaceId: thread.workspace, afterSequence, ...(turnId ? { turnId } : {}) });
-                    if (!response || typeof response !== "object" || Array.isArray(response) || !Array.isArray(response.events) || response.events.length > 1000 || typeof response.complete !== "boolean")
-                      throw new ControllerError("transcript_invalid", "Transcript replay is invalid");
-                    for (const item of response.events) if (!item || typeof item !== "object" || Array.isArray(item) || item.schema !== "lapis.transcript/1" || item.threadId !== thread.id || (turnId && item.turnId !== turnId))
-                      throw new ControllerError("transcript_invalid", "Transcript replay scope is invalid");
-                    for (const item of response.events) assertTranscript(controller.store.capture.clean(item));
-                    return response as unknown as import("../transcript-contracts.js").TranscriptPage;
-                  },
-                }, applicationId));
-              if (input.tools)
-                disposers.push(
-                  controller.registerTools(owner, endpointId, {
-                    definitions: input.tools as ToolDefinition[],
-                    ...(input.capture === true ? { capture: (context: { thread: Thread; turn: Turn; signal: AbortSignal }) => ({
-                      begin: async (payload: Parameters<import("../domain/ports.js").ToolCapture["begin"]>[0]) => {
-                        const value = await call("capture.begin", { ...payload, threadId: context.thread.id, turnId: context.turn.id }, context.signal);
-                        if (!value || typeof value !== "object" || Array.isArray(value) || typeof value.spanId !== "string" || !value.spanId)
-                          throw new ControllerError("capture_unavailable", "Capture endpoint omitted its span identity");
-                        return { spanId: value.spanId };
-                      },
-                      finish: async (payload: Parameters<import("../domain/ports.js").ToolCapture["finish"]>[0]) => { await call("capture.finish", { ...payload, threadId: context.thread.id, turnId: context.turn.id }); },
-                      observe: async (payload: Parameters<NonNullable<import("../domain/ports.js").ToolCapture["observe"]>>[0]) => { await call("capture.observe", { ...payload, threadId: context.thread.id, turnId: context.turn.id }, context.signal); },
-                    }) } : {}),
-                    execute: async (name, args, context) => {
-                      const result = await call(
-                        "tool.execute",
-                        {
-                          name,
-                          arguments: args,
-                          invocationId: context.invocationId,
-                          thread: context.thread as unknown as Json,
-                          turn: context.turn as unknown as Json,
-                        },
-                        context.signal,
-                      );
-                      if (
-                        !result ||
-                        typeof result !== "object" ||
-                        Array.isArray(result) ||
-                        !("content" in result)
-                      )
-                        throw new ControllerError(
-                          "invalid_tool_result",
-                          "Tool response is invalid",
-                        );
-                      return result as unknown as ToolResult;
-                    },
-                  }, applicationId),
-                );
-            } catch (error) {
-              disposers.reverse().forEach((dispose) => dispose());
-              throw error;
-            }
-            registrations.set(endpointId, () =>
-              disposers.forEach((dispose) => dispose()),
-            );
-            return { registered: endpointId };
+            registrations.set(String(input.id), registered.dispose);
+            return { registered: registered.registered };
           },
           respond(input) {
             endpoints.respond(
@@ -395,209 +205,4 @@ export async function serveController(
       await new Promise<void>((resolve) => http.close(() => resolve()));
     },
   };
-}
-type Connection = {
-  subscribe(threadId: string, after?: string): unknown;
-  unsubscribe(threadId: string): void;
-  register(input: Record<string, unknown>): unknown;
-  respond(input: Record<string, unknown>): void;
-  unregister(id: string): void;
-};
-function dispatch(
-  method: string,
-  p: Record<string, unknown>,
-  session: AuthSession,
-  controller: Controller,
-  connection: Connection,
-): unknown {
-  requireScope(session, method, p);
-  const store = controller.store;
-  const owner = session.principalId;
-  const allowed = (thread: import("../contracts.js").Thread) => {
-    try {
-      requireResource(session, thread);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-  let targetThread = typeof p.threadId === "string" ? p.threadId : undefined;
-  if (typeof p.turnId === "string") {
-    const turnThread = store.turn(p.turnId)?.threadId;
-    if (targetThread && turnThread && targetThread !== turnThread)
-      throw new ControllerError("scope_conflict", "Turn and thread scope do not match");
-    targetThread = turnThread ?? targetThread;
-  }
-  if (method === "interactions.respond")
-    targetThread = store.interaction(String(p.id))?.threadId;
-  if (method === "commands.get")
-    targetThread = store.receipt(owner, String(p.commandId))?.threadId;
-  if (targetThread) requireResource(session, store.authorizeThread(owner, targetThread));
-  switch (method) {
-    case "transcript.replay":
-      return controller.replayTranscript(owner, String(p.threadId), Number(p.afterSequence ?? 0), typeof p.turnId === "string" ? p.turnId : undefined);
-    case "interactions.list":
-      store.authorizeThread(owner, String(p.threadId));
-      return store.interactions(String(p.threadId));
-    case "tools.list":
-      return controller.inspectTools(owner, String(p.threadId));
-    case "threads.configure": {
-      const thread = store.authorizeThread(owner, String(p.threadId));
-      if (
-        !controller.providers.get(thread.provider)?.capabilities.configuration
-      )
-        throw new ControllerError(
-          "unsupported_configuration",
-          "Provider does not support configuration",
-        );
-      return store.configure(
-        owner,
-        thread.id,
-        Number(p.version),
-        p.configuration as import("../contracts.js").ProviderConfig,
-      );
-    }
-    case "providers.models": {
-      if (
-        !session.providers.includes(String(p.provider)) ||
-        !session.workspaces.includes(String(p.workspace))
-      )
-        throw new ControllerError(
-          "forbidden",
-          "Provider or workspace is not authorized",
-        );
-      const provider = controller.providers.get(String(p.provider));
-      if (!provider?.models)
-        throw new ControllerError(
-          "unsupported_discovery",
-          "Provider does not support model discovery",
-        );
-      return provider.models(
-        String(p.workspace),
-        typeof p.sessionId === "string" && p.sessionId.trim()
-          ? { sessionId: p.sessionId.trim() }
-          : undefined,
-      );
-    }
-    case "system.status":
-      return {
-        protocol: PROTOCOL,
-        threads: store.threads(owner).filter(allowed).length,
-        providers: session.providers,
-        session: session.id,
-      };
-    case "providers.list":
-      return session.providers.map((id) => ({
-        id,
-        capabilities: controller.providers.get(id)?.capabilities ?? null,
-      }));
-    case "threads.create": {
-      if (
-        !session.providers.includes(String(p.provider)) ||
-        !session.workspaces.includes(String(p.workspace))
-      )
-        throw new ControllerError(
-          "forbidden",
-          "Provider or workspace is not authorized",
-        );
-      return store.createThread(
-        owner,
-        p as unknown as ThreadInput,
-        session.applicationId,
-      );
-    }
-    case "threads.list":
-      return store.threads(owner).filter(allowed);
-    case "threads.snapshot":
-      return store.snapshot(owner, String(p.threadId));
-    case "turns.continue":
-      return controller.continueTurn(owner, p as unknown as import("../contracts.js").ContinueInput);
-    case "turns.submit":
-      return controller.submit(owner, p as unknown as TurnInput);
-    case "turns.get":
-    case "context.get":
-    case "turns.cancel":
-    case "turns.resolve": {
-      const turn = store.turn(String(p.turnId));
-      if (!turn) throw new ControllerError("not_found", "Turn not found");
-      store.authorizeThread(owner, turn.threadId);
-      if (method === "turns.cancel") {
-        controller.cancel(owner, turn.id);
-        return { requested: true };
-      }
-      if (method === "turns.resolve") {
-        controller.resolve(
-          owner,
-          turn.id,
-          p.outcome as "failed" | "cancelled",
-          p.externalStopped === true,
-        );
-        return store.turn(turn.id);
-      }
-      return method === "context.get"
-        ? (store.preparation(turn.id) ?? { unavailable: true })
-        : turn;
-    }
-    case "commands.get":
-      return store.receipt(owner, String(p.commandId)) ?? null;
-    case "memory.search":
-    case "memory.get":
-      return controller.readMemory(
-        owner,
-        String(p.threadId),
-        method === "memory.search" ? "search" : "get",
-        p.input as Json,
-      );
-    case "events.read":
-      return store.events(
-        owner,
-        String(p.threadId),
-        String(p.after),
-        p.limit as number | undefined,
-      );
-    case "events.subscribe":
-      return connection.subscribe(
-        String(p.threadId),
-        p.after as string | undefined,
-      );
-    case "events.unsubscribe":
-      return connection.unsubscribe(String(p.threadId));
-    case "interactions.respond":
-      return controller.respond(owner, String(p.id), p.response as Json);
-    case "endpoints.register":
-      return connection.register(p);
-    case "endpoints.respond":
-      return connection.respond(p);
-    case "endpoints.unregister":
-      return connection.unregister(String(p.id));
-    default:
-      throw new ControllerError("method_unknown", "Unknown operation");
-  }
-}
-function validContext(block: Json): boolean {
-  if (!block || typeof block !== "object" || Array.isArray(block)) return false;
-  return (
-    typeof block.id === "string" &&
-    typeof block.revision === "string" &&
-    typeof block.content === "string" &&
-    block.content.length <= 100_000 &&
-    ["instructions", "handoff", "memory", "application"].includes(
-      String(block.kind),
-    ) &&
-    ["instructions", "reference"].includes(String(block.trust))
-  );
-}
-function validCandidate(item: Json): boolean {
-  if (!item || typeof item !== "object" || Array.isArray(item)) return false;
-  return (
-    typeof item.ref === "string" &&
-    typeof item.revision === "string" &&
-    typeof item.content === "string" &&
-    item.content.length <= 100_000 &&
-    typeof item.active === "boolean" &&
-    typeof item.curated === "boolean" &&
-    ["owner", "agent", "untrusted", "system"].includes(String(item.origin)) &&
-    Array.isArray(item.provenance) &&
-    item.provenance.every((value) => typeof value === "string")
-  );
 }
