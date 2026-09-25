@@ -14,3 +14,7 @@
 | --- | --- |
 | `src/`, `scripts/`, `package.json`, `deno.json`, `docs/` | `architecture.md` |
 | `AGENTS.md`, `spec-validator.config.mjs`, `spec/book.toml`, `.gitignore` | `spec-governance.md` |
+
+`AGENTS.md` points operators at the counted-line budgets and import matrix
+enforced by AIC-ARCH-001 and AIC-ARCH-002. Organisation plans under
+`docs/plans/` remain non-canonical.

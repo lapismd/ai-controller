@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "sourceCommit": "fixture",
+  "limits": {
+    "newProductionCountedLines": 300,
+    "newTestCountedLines": 500,
+    "newScriptCountedLines": 300
+  },
+  "files": {
+    "src/protocol/a.ts": {
+      "countedLines": 2,
+      "physicalLines": 2,
+      "forbiddenImportCount": 0
+    },
+    "src/protocol/b.ts": {
+      "countedLines": 2,
+      "physicalLines": 2,
+      "forbiddenImportCount": 0
+    }
+  }
+}

@@ -64,6 +64,8 @@ Endpoint disposal revokes tools, context and memory registrations immediately.
 | AIC-CLI-001  | The Deno executable MUST expose typed service, execution, interaction, context and memory commands with generated help, human output, versioned JSON/NDJSON and stable exit classes. Secrets MUST NOT appear in diagnostics.                                                                                                                                                                                                                                                                                                                                                                                                       |
 | AIC-CLI-002  | `pnpm local:controller` MUST build the current checkout, atomically install `lapis-ai-controller` at `~/.local/bin/lapis-ai-controller` by default, initialize missing default configuration with `--workspace` or `~/.lapis/ai-controller`, reload the user service, and wait until `status` reports protocol `lapis-ai-controller/1`. It MUST NOT print tokens or private payloads.                                                                                                                                                                                                                                              |
 | AIC-PKG-001  | Browser SDK exports MUST exclude server and consumer dependencies. Published dependencies MUST use registry semver ranges.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| AIC-ARCH-001 | `scripts/check-architecture.mjs` MUST enforce counted-line budgets. New production and script files MUST stay at or under 300 counted lines, and new tests at or under 500. Existing files MUST NOT grow without updating `scripts/architecture-baseline.json` in the same change, and a recorded budget MUST fail when the current size plus twenty is still below that budget. |
+| AIC-ARCH-002 | Feature modules MUST follow the published import matrix: `cli` MUST NOT import `domain`, `memory`, or `persistence`; `execution` MUST NOT import `transport`; and `client` and `runtime` MUST NOT import `persistence`. Production modules MUST NOT import tests. Dump filenames `utils`, `helpers`, `common`, and `services` MUST be rejected. |
 
 Private payloads remain volatile where the integration selects metadata-only
 retention. A durable receipt in that profile covers metadata and external source
@@ -134,6 +136,18 @@ replaces `~/.local/bin/lapis-ai-controller` atomically, initializes the default
 config only when missing using `--workspace` or `~/.lapis/ai-controller`, then
 reloads the user service and waits for an authenticated `status` handshake.
 Building alone still does not install or start a service.
+
+Production source already lives under `auth`, `capture`, `cli`, `domain`,
+`execution`, `memory`, `persistence`, and `transport`. Residual root files are
+public facades (`client`, `runtime`, `managed`, `contracts`) or composition
+roots (`index`, `main`, `service`). For AIC-ARCH-001 and AIC-ARCH-002,
+`scripts/check-architecture.mjs` enforces counted-line budgets and that
+import matrix. New production and script files must stay at or under 300
+counted lines; new tests at or under 500. Existing files must not grow
+counted lines without updating `scripts/architecture-baseline.json` in the
+same change. A recorded budget fails when the current counted size plus
+twenty is still below that budget. Organisation plans under `docs/plans/`
+are not canonical requirements.
 
 ### AIC-CLI-002 acceptance details
 

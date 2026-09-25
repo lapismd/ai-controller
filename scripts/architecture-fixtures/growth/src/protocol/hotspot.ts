@@ -1,0 +1,11 @@
+export const n0 = 0;
+export const n1 = 1;
+export const n2 = 2;
+export const n3 = 3;
+export const n4 = 4;
+export const n5 = 5;
+export const n6 = 6;
+export const n7 = 7;
+export const n8 = 8;
+export const n9 = 9;
+export const n10 = 10;

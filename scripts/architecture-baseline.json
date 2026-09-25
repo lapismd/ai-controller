@@ -1,0 +1,680 @@
+{
+  "version": 1,
+  "sourceCommit": "55b78fba8f283facb67d31208f5fb4643c832ada",
+  "limits": {
+    "newProductionCountedLines": 300,
+    "newTestCountedLines": 500,
+    "newScriptCountedLines": 300
+  },
+  "files": {
+    "scripts/architecture-imports.mjs": {
+      "countedLines": 165,
+      "physicalLines": 180,
+      "forbiddenImportCount": 0
+    },
+    "scripts/architecture-lines.mjs": {
+      "countedLines": 37,
+      "physicalLines": 40,
+      "forbiddenImportCount": 0
+    },
+    "scripts/architecture-policy.mjs": {
+      "countedLines": 215,
+      "physicalLines": 250,
+      "forbiddenImportCount": 0
+    },
+    "scripts/architecture-scan.mjs": {
+      "countedLines": 161,
+      "physicalLines": 167,
+      "forbiddenImportCount": 0
+    },
+    "scripts/architecture.test.mjs": {
+      "countedLines": 175,
+      "physicalLines": 204,
+      "forbiddenImportCount": 0
+    },
+    "scripts/build-cli.mjs": {
+      "countedLines": 79,
+      "physicalLines": 81,
+      "forbiddenImportCount": 0
+    },
+    "scripts/bundle.mjs": {
+      "countedLines": 13,
+      "physicalLines": 13,
+      "forbiddenImportCount": 0
+    },
+    "scripts/check-architecture.mjs": {
+      "countedLines": 208,
+      "physicalLines": 230,
+      "forbiddenImportCount": 0
+    },
+    "scripts/check-boundaries.mjs": {
+      "countedLines": 21,
+      "physicalLines": 22,
+      "forbiddenImportCount": 0
+    },
+    "scripts/docs-cli.mjs": {
+      "countedLines": 11,
+      "physicalLines": 11,
+      "forbiddenImportCount": 0
+    },
+    "scripts/lib/local-controller.mjs": {
+      "countedLines": 201,
+      "physicalLines": 220,
+      "forbiddenImportCount": 0
+    },
+    "scripts/local-controller.mjs": {
+      "countedLines": 35,
+      "physicalLines": 37,
+      "forbiddenImportCount": 0
+    },
+    "scripts/local-controller.test.mjs": {
+      "countedLines": 266,
+      "physicalLines": 272,
+      "forbiddenImportCount": 0
+    },
+    "scripts/smoke-cli.mjs": {
+      "countedLines": 94,
+      "physicalLines": 94,
+      "forbiddenImportCount": 0
+    },
+    "src/auth/authorize.test.ts": {
+      "countedLines": 64,
+      "physicalLines": 67,
+      "forbiddenImportCount": 0
+    },
+    "src/auth/authorize.ts": {
+      "countedLines": 57,
+      "physicalLines": 64,
+      "forbiddenImportCount": 0
+    },
+    "src/auth/scopes.test.ts": {
+      "countedLines": 29,
+      "physicalLines": 30,
+      "forbiddenImportCount": 0
+    },
+    "src/auth/scopes.ts": {
+      "countedLines": 112,
+      "physicalLines": 122,
+      "forbiddenImportCount": 0
+    },
+    "src/auth/session.test.ts": {
+      "countedLines": 46,
+      "physicalLines": 48,
+      "forbiddenImportCount": 0
+    },
+    "src/auth/session.ts": {
+      "countedLines": 138,
+      "physicalLines": 151,
+      "forbiddenImportCount": 1
+    },
+    "src/capture/boundary.ts": {
+      "countedLines": 43,
+      "physicalLines": 46,
+      "forbiddenImportCount": 0
+    },
+    "src/capture/session.test.ts": {
+      "countedLines": 139,
+      "physicalLines": 139,
+      "forbiddenImportCount": 0
+    },
+    "src/capture/session.ts": {
+      "countedLines": 167,
+      "physicalLines": 170,
+      "forbiddenImportCount": 0
+    },
+    "src/capture/validation.ts": {
+      "countedLines": 1,
+      "physicalLines": 1,
+      "forbiddenImportCount": 0
+    },
+    "src/cli/brand.ts": {
+      "countedLines": 2,
+      "physicalLines": 2,
+      "forbiddenImportCount": 0
+    },
+    "src/cli/cli.test.ts": {
+      "countedLines": 241,
+      "physicalLines": 242,
+      "forbiddenImportCount": 0
+    },
+    "src/cli/commands.ts": {
+      "countedLines": 255,
+      "physicalLines": 255,
+      "forbiddenImportCount": 0
+    },
+    "src/cli/config.ts": {
+      "countedLines": 195,
+      "physicalLines": 195,
+      "forbiddenImportCount": 0
+    },
+    "src/cli/main.ts": {
+      "countedLines": 310,
+      "physicalLines": 313,
+      "forbiddenImportCount": 0,
+      "kind": "legacy",
+      "justification": "CLI command table; split only if a later change needs room"
+    },
+    "src/cli/managed-child.ts": {
+      "countedLines": 88,
+      "physicalLines": 89,
+      "forbiddenImportCount": 0
+    },
+    "src/cli/output.ts": {
+      "countedLines": 43,
+      "physicalLines": 44,
+      "forbiddenImportCount": 0
+    },
+    "src/cli/self.ts": {
+      "countedLines": 28,
+      "physicalLines": 28,
+      "forbiddenImportCount": 0
+    },
+    "src/cli/service.ts": {
+      "countedLines": 407,
+      "physicalLines": 429,
+      "forbiddenImportCount": 0,
+      "kind": "legacy",
+      "justification": "OS service wrappers; split only if a later change needs room"
+    },
+    "src/cli/types.ts": {
+      "countedLines": 41,
+      "physicalLines": 44,
+      "forbiddenImportCount": 0
+    },
+    "src/client.ts": {
+      "countedLines": 580,
+      "physicalLines": 586,
+      "forbiddenImportCount": 0,
+      "kind": "legacy",
+      "justification": "Public ./client facade; split snapshot and subscription helpers"
+    },
+    "src/contracts.ts": {
+      "countedLines": 283,
+      "physicalLines": 286,
+      "forbiddenImportCount": 0
+    },
+    "src/domain/approval-policy.test.ts": {
+      "countedLines": 42,
+      "physicalLines": 43,
+      "forbiddenImportCount": 0
+    },
+    "src/domain/approval-policy.ts": {
+      "countedLines": 15,
+      "physicalLines": 17,
+      "forbiddenImportCount": 0
+    },
+    "src/domain/context.ts": {
+      "countedLines": 146,
+      "physicalLines": 147,
+      "forbiddenImportCount": 0
+    },
+    "src/domain/continuation.test.ts": {
+      "countedLines": 73,
+      "physicalLines": 78,
+      "forbiddenImportCount": 0
+    },
+    "src/domain/continuation.ts": {
+      "countedLines": 54,
+      "physicalLines": 56,
+      "forbiddenImportCount": 0
+    },
+    "src/domain/engine.test.ts": {
+      "countedLines": 662,
+      "physicalLines": 670,
+      "forbiddenImportCount": 0,
+      "kind": "legacy",
+      "justification": "Engine suite; split with the extracted production boundary"
+    },
+    "src/domain/engine.ts": {
+      "countedLines": 883,
+      "physicalLines": 886,
+      "forbiddenImportCount": 0,
+      "kind": "legacy",
+      "justification": "Turn engine facade; split commands into named domain modules"
+    },
+    "src/domain/execution-policy.ts": {
+      "countedLines": 17,
+      "physicalLines": 18,
+      "forbiddenImportCount": 0
+    },
+    "src/domain/interaction-lifecycle.ts": {
+      "countedLines": 24,
+      "physicalLines": 27,
+      "forbiddenImportCount": 0
+    },
+    "src/domain/mcp.ts": {
+      "countedLines": 43,
+      "physicalLines": 43,
+      "forbiddenImportCount": 0
+    },
+    "src/domain/ports.ts": {
+      "countedLines": 137,
+      "physicalLines": 143,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/acp-configure.test.ts": {
+      "countedLines": 31,
+      "physicalLines": 33,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/acp-configure.ts": {
+      "countedLines": 20,
+      "physicalLines": 21,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/acp-effective-policy.test.ts": {
+      "countedLines": 29,
+      "physicalLines": 30,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/acp-permission-lifecycle.test.ts": {
+      "countedLines": 34,
+      "physicalLines": 35,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/acp-permission-policy.test.ts": {
+      "countedLines": 49,
+      "physicalLines": 51,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/acp.test.ts": {
+      "countedLines": 99,
+      "physicalLines": 101,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/acp.ts": {
+      "countedLines": 416,
+      "physicalLines": 418,
+      "forbiddenImportCount": 0,
+      "kind": "legacy",
+      "justification": "ACP provider; split only if a later change needs room"
+    },
+    "src/execution/codex.test.ts": {
+      "countedLines": 64,
+      "physicalLines": 65,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/codex.ts": {
+      "countedLines": 306,
+      "physicalLines": 309,
+      "forbiddenImportCount": 0,
+      "kind": "legacy",
+      "justification": "Codex provider; split only if a later change needs room"
+    },
+    "src/execution/commands.test.ts": {
+      "countedLines": 18,
+      "physicalLines": 18,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/commands.ts": {
+      "countedLines": 39,
+      "physicalLines": 42,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/compat/acp-event-mapper.test.ts": {
+      "countedLines": 279,
+      "physicalLines": 285,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/compat/acp-event-mapper.ts": {
+      "countedLines": 347,
+      "physicalLines": 366,
+      "forbiddenImportCount": 0,
+      "kind": "legacy",
+      "justification": "ACP event mapping; split only if a later change needs room"
+    },
+    "src/execution/compat/app-server-protocol.test.ts": {
+      "countedLines": 215,
+      "physicalLines": 220,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/compat/app-server-protocol.ts": {
+      "countedLines": 359,
+      "physicalLines": 376,
+      "forbiddenImportCount": 0,
+      "kind": "legacy",
+      "justification": "App-server protocol; split only if a later change needs room"
+    },
+    "src/execution/compat/codex-runtime.test.ts": {
+      "countedLines": 334,
+      "physicalLines": 355,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/compat/codex-runtime.ts": {
+      "countedLines": 415,
+      "physicalLines": 448,
+      "forbiddenImportCount": 0,
+      "kind": "legacy",
+      "justification": "Native Codex adapter; split only if a later change needs room"
+    },
+    "src/execution/compat/event-queue.ts": {
+      "countedLines": 45,
+      "physicalLines": 49,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/compat/process-host.ts": {
+      "countedLines": 29,
+      "physicalLines": 34,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/compat/skill-types.ts": {
+      "countedLines": 27,
+      "physicalLines": 30,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/compat/tool-identity.ts": {
+      "countedLines": 40,
+      "physicalLines": 45,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/compat/tool-snapshot.test.ts": {
+      "countedLines": 55,
+      "physicalLines": 58,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/compat/tool-snapshot.ts": {
+      "countedLines": 223,
+      "physicalLines": 239,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/compat/types.ts": {
+      "countedLines": 301,
+      "physicalLines": 337,
+      "forbiddenImportCount": 0,
+      "kind": "legacy",
+      "justification": "Compat DTO types; split only if a later change needs room"
+    },
+    "src/execution/host-auth-boundary.test.ts": {
+      "countedLines": 17,
+      "physicalLines": 18,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/native-permission-mode.ts": {
+      "countedLines": 11,
+      "physicalLines": 13,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/process-host.ts": {
+      "countedLines": 50,
+      "physicalLines": 52,
+      "forbiddenImportCount": 0
+    },
+    "src/index.ts": {
+      "countedLines": 13,
+      "physicalLines": 13,
+      "forbiddenImportCount": 0
+    },
+    "src/main.ts": {
+      "countedLines": 13,
+      "physicalLines": 13,
+      "forbiddenImportCount": 0
+    },
+    "src/managed.test.ts": {
+      "countedLines": 158,
+      "physicalLines": 163,
+      "forbiddenImportCount": 0
+    },
+    "src/managed.ts": {
+      "countedLines": 250,
+      "physicalLines": 255,
+      "forbiddenImportCount": 1
+    },
+    "src/memory/group/capture-store.test.ts": {
+      "countedLines": 19,
+      "physicalLines": 19,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/group/capture-store.ts": {
+      "countedLines": 19,
+      "physicalLines": 23,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/group/config.ts": {
+      "countedLines": 19,
+      "physicalLines": 21,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/group/embedding-lifecycle.test.ts": {
+      "countedLines": 69,
+      "physicalLines": 74,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/group/embedding-port.ts": {
+      "countedLines": 6,
+      "physicalLines": 6,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/group/index.ts": {
+      "countedLines": 4,
+      "physicalLines": 4,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/group/service.test.ts": {
+      "countedLines": 171,
+      "physicalLines": 174,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/group/service.ts": {
+      "countedLines": 981,
+      "physicalLines": 1036,
+      "forbiddenImportCount": 0,
+      "kind": "legacy",
+      "justification": "Group memory compatibility; split with the extracted production boundary"
+    },
+    "src/memory/group/store-port.ts": {
+      "countedLines": 219,
+      "physicalLines": 234,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/index.ts": {
+      "countedLines": 8,
+      "physicalLines": 8,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/lapis/candidate-extractor.ts": {
+      "countedLines": 262,
+      "physicalLines": 276,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/lapis/capture-port.ts": {
+      "countedLines": 48,
+      "physicalLines": 53,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/lapis/context-handoff.test.ts": {
+      "countedLines": 148,
+      "physicalLines": 158,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/lapis/context-handoff.ts": {
+      "countedLines": 262,
+      "physicalLines": 276,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/lapis/conversation-hashes.ts": {
+      "countedLines": 51,
+      "physicalLines": 56,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/lapis/conversation-paths.ts": {
+      "countedLines": 69,
+      "physicalLines": 77,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/lapis/conversation-types.ts": {
+      "countedLines": 254,
+      "physicalLines": 272,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/lapis/database-port.ts": {
+      "countedLines": 167,
+      "physicalLines": 178,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/lapis/evidence-port.ts": {
+      "countedLines": 22,
+      "physicalLines": 23,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/lapis/hashes.ts": {
+      "countedLines": 48,
+      "physicalLines": 53,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/lapis/index.ts": {
+      "countedLines": 48,
+      "physicalLines": 50,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/lapis/memory-record-store.ts": {
+      "countedLines": 296,
+      "physicalLines": 322,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/lapis/memory-scheduler.ts": {
+      "countedLines": 161,
+      "physicalLines": 170,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/lapis/native-memory-service.test.ts": {
+      "countedLines": 179,
+      "physicalLines": 179,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/lapis/native-memory-service.ts": {
+      "countedLines": 1665,
+      "physicalLines": 1727,
+      "forbiddenImportCount": 0,
+      "kind": "legacy",
+      "justification": "Lapis memory compatibility; split with the extracted production boundary"
+    },
+    "src/memory/lapis/paths.ts": {
+      "countedLines": 74,
+      "physicalLines": 85,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/lapis/runtime-consolidation-provider.ts": {
+      "countedLines": 189,
+      "physicalLines": 201,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/lapis/types.ts": {
+      "countedLines": 160,
+      "physicalLines": 181,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/ranking.ts": {
+      "countedLines": 79,
+      "physicalLines": 80,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/recall.test.ts": {
+      "countedLines": 99,
+      "physicalLines": 99,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/recall.ts": {
+      "countedLines": 125,
+      "physicalLines": 127,
+      "forbiddenImportCount": 0
+    },
+    "src/persistence/lock.ts": {
+      "countedLines": 66,
+      "physicalLines": 68,
+      "forbiddenImportCount": 0
+    },
+    "src/persistence/private-transcript-replay.test.ts": {
+      "countedLines": 31,
+      "physicalLines": 32,
+      "forbiddenImportCount": 0
+    },
+    "src/persistence/sanitization.test.ts": {
+      "countedLines": 68,
+      "physicalLines": 68,
+      "forbiddenImportCount": 0
+    },
+    "src/persistence/schemas.ts": {
+      "countedLines": 201,
+      "physicalLines": 205,
+      "forbiddenImportCount": 0
+    },
+    "src/persistence/store.test.ts": {
+      "countedLines": 179,
+      "physicalLines": 181,
+      "forbiddenImportCount": 0
+    },
+    "src/persistence/store.ts": {
+      "countedLines": 806,
+      "physicalLines": 810,
+      "forbiddenImportCount": 0,
+      "kind": "legacy",
+      "justification": "SQLite store facade; split by durable concern"
+    },
+    "src/policy-contracts.ts": {
+      "countedLines": 11,
+      "physicalLines": 12,
+      "forbiddenImportCount": 0
+    },
+    "src/runtime.test.ts": {
+      "countedLines": 452,
+      "physicalLines": 464,
+      "forbiddenImportCount": 0
+    },
+    "src/runtime.ts": {
+      "countedLines": 496,
+      "physicalLines": 501,
+      "forbiddenImportCount": 1,
+      "kind": "legacy",
+      "justification": "Public ./runtime facade; split only if a later change needs room"
+    },
+    "src/service.test.ts": {
+      "countedLines": 32,
+      "physicalLines": 32,
+      "forbiddenImportCount": 0
+    },
+    "src/service.ts": {
+      "countedLines": 104,
+      "physicalLines": 106,
+      "forbiddenImportCount": 0
+    },
+    "src/transcript-contracts.ts": {
+      "countedLines": 43,
+      "physicalLines": 45,
+      "forbiddenImportCount": 0
+    },
+    "src/transport/endpoints.ts": {
+      "countedLines": 138,
+      "physicalLines": 140,
+      "forbiddenImportCount": 0
+    },
+    "src/transport/schema.test.ts": {
+      "countedLines": 14,
+      "physicalLines": 16,
+      "forbiddenImportCount": 0
+    },
+    "src/transport/schema.ts": {
+      "countedLines": 167,
+      "physicalLines": 167,
+      "forbiddenImportCount": 0
+    },
+    "src/transport/server.test.ts": {
+      "countedLines": 743,
+      "physicalLines": 747,
+      "forbiddenImportCount": 0,
+      "kind": "legacy",
+      "justification": "Transport contract suite; split with extracted host surfaces"
+    },
+    "src/transport/server.ts": {
+      "countedLines": 601,
+      "physicalLines": 603,
+      "forbiddenImportCount": 0,
+      "kind": "legacy",
+      "justification": "WebSocket host facade; split dispatch from serve"
+    },
+    "src/transport/transcript.test.ts": {
+      "countedLines": 56,
+      "physicalLines": 57,
+      "forbiddenImportCount": 0
+    }
+  }
+}

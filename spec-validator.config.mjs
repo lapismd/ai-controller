@@ -56,5 +56,15 @@ export default defineConfig(tableRequirements(), {
       ],
     },
   },
-  check: { build: true, first: true },
+  check: {
+    lanes: [
+      {
+        name: "architecture",
+        command: "node",
+        args: ["scripts/check-architecture.mjs"],
+      },
+    ],
+    build: true,
+    first: true,
+  },
 });

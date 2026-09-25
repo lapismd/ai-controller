@@ -10,7 +10,7 @@ import { requestMethods } from "../transport/schema.js";
 
 describe("RPC scope map", () => {
   it("declares a scope for every schema method", () => {
-    expect(() => assertCompleteScopeMap()).not.toThrow();
+    expect(() => assertCompleteScopeMap(requestMethods())).not.toThrow();
     for (const method of requestMethods())
       expect(RPC_REQUIRED_SCOPES).toHaveProperty(method);
     expect(requiredScopeForRpcMethod("turns.submit")).toBe("threads:operate");

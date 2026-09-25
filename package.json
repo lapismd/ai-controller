@@ -44,7 +44,8 @@
     }
   },
   "scripts": {
-    "check": "tsc --noEmit && node scripts/check-boundaries.mjs",
+    "check": "tsc --noEmit && pnpm check:architecture && node scripts/check-boundaries.mjs",
+    "check:architecture": "node scripts/check-architecture.mjs",
     "test": "vitest run",
     "build": "tsc && node scripts/bundle.mjs",
     "build:cli": "deno task build",

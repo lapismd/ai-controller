@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "sourceCommit": "fixture",
+  "limits": {
+    "newProductionCountedLines": 300,
+    "newTestCountedLines": 500,
+    "newScriptCountedLines": 300
+  },
+  "files": {
+    "src/protocol/ok.ts": {
+      "countedLines": 1,
+      "physicalLines": 1,
+      "forbiddenImportCount": 0
+    }
+  }
+}

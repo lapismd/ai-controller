@@ -4,8 +4,6 @@ import {
   type ControllerScope,
   type Principal,
 } from "../contracts.js";
-import { requestMethods } from "../transport/schema.js";
-
 export type ScopeRequirement = ControllerScope | "authenticated";
 
 export const DEFAULT_SCOPES: readonly ControllerScope[] = CONTROLLER_SCOPES;
@@ -117,8 +115,8 @@ export function narrowScopes(
   return unique;
 }
 
-export function assertCompleteScopeMap(): void {
-  for (const method of requestMethods())
+export function assertCompleteScopeMap(methods: readonly string[]): void {
+  for (const method of methods)
     if (!Object.hasOwn(RPC_REQUIRED_SCOPES, method))
       throw new Error(`RPC method ${method} has no declared authorization scope.`);
 }
