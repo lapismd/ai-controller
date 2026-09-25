@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "sourceCommit": "ea876fda24d20c049e40dd5110d91a89d354672a",
+  "sourceCommit": "112d05c9465ac8462df79b6810738063c4c15a72",
   "limits": {
     "newProductionCountedLines": 300,
     "newTestCountedLines": 500,
@@ -218,6 +218,51 @@
       "physicalLines": 56,
       "forbiddenImportCount": 0
     },
+    "src/domain/engine-endpoints.ts": {
+      "countedLines": 179,
+      "physicalLines": 186,
+      "forbiddenImportCount": 0
+    },
+    "src/domain/engine-execute.ts": {
+      "countedLines": 259,
+      "physicalLines": 261,
+      "forbiddenImportCount": 0
+    },
+    "src/domain/engine-host.ts": {
+      "countedLines": 41,
+      "physicalLines": 44,
+      "forbiddenImportCount": 0
+    },
+    "src/domain/engine-interact.ts": {
+      "countedLines": 108,
+      "physicalLines": 109,
+      "forbiddenImportCount": 0
+    },
+    "src/domain/engine-respond.ts": {
+      "countedLines": 79,
+      "physicalLines": 81,
+      "forbiddenImportCount": 0
+    },
+    "src/domain/engine-schedule.ts": {
+      "countedLines": 57,
+      "physicalLines": 61,
+      "forbiddenImportCount": 0
+    },
+    "src/domain/engine-tools.ts": {
+      "countedLines": 178,
+      "physicalLines": 181,
+      "forbiddenImportCount": 0
+    },
+    "src/domain/engine-transcript.ts": {
+      "countedLines": 117,
+      "physicalLines": 121,
+      "forbiddenImportCount": 0
+    },
+    "src/domain/engine-turns.ts": {
+      "countedLines": 114,
+      "physicalLines": 118,
+      "forbiddenImportCount": 0
+    },
     "src/domain/engine.test.ts": {
       "countedLines": 662,
       "physicalLines": 670,
@@ -226,11 +271,9 @@
       "justification": "Engine suite; split with the extracted production boundary"
     },
     "src/domain/engine.ts": {
-      "countedLines": 883,
-      "physicalLines": 886,
-      "forbiddenImportCount": 0,
-      "kind": "legacy",
-      "justification": "Turn engine facade; split commands into named domain modules"
+      "countedLines": 168,
+      "physicalLines": 186,
+      "forbiddenImportCount": 0
     },
     "src/domain/execution-policy.ts": {
       "countedLines": 17,
@@ -245,6 +288,11 @@
     "src/domain/mcp.ts": {
       "countedLines": 43,
       "physicalLines": 43,
+      "forbiddenImportCount": 0
+    },
+    "src/domain/memory-tools.ts": {
+      "countedLines": 26,
+      "physicalLines": 27,
       "forbiddenImportCount": 0
     },
     "src/domain/ports.ts": {
