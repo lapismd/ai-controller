@@ -1,6 +1,6 @@
 # TypeScript architecture and enforcement
 
-**Status:** P0 in progress. Canonical requirements live in `spec/src`.
+**Status:** P0 landed (`wrutmqys`). Extract in progress. Canonical requirements live in `spec/src`.
 
 **Kind of statements:** **Fact** is observed in this checkout. **Recommendation**
 is a chosen policy. Organisation plans under `docs/plans/` are not canonical.
@@ -53,7 +53,8 @@ src/
 - **P1.** Skipped: folders already exist.
 - **P2.** Extract `native-memory-service`, `memory/group/service`, `engine`,
   `store`, `server`, and `client` until new production files stay at or under
-  300 counted lines.
+  300 counted lines. Lapis native memory now delegates ingest, search, inspect,
+  forget, and consolidation to named modules.
 
 ## Import matrix (summary)
 

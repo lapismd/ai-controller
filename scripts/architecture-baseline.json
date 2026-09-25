@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "sourceCommit": "55b78fba8f283facb67d31208f5fb4643c832ada",
+  "sourceCommit": "befd2dc6925c8cd0378136fb7aad42b440f340c0",
   "limits": {
     "newProductionCountedLines": 300,
     "newTestCountedLines": 500,
@@ -481,6 +481,16 @@
       "physicalLines": 53,
       "forbiddenImportCount": 0
     },
+    "src/memory/lapis/consolidation-validate.ts": {
+      "countedLines": 75,
+      "physicalLines": 77,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/lapis/consolidation-write.ts": {
+      "countedLines": 102,
+      "physicalLines": 107,
+      "forbiddenImportCount": 0
+    },
     "src/memory/lapis/context-handoff.test.ts": {
       "countedLines": 148,
       "physicalLines": 158,
@@ -494,6 +504,11 @@
     "src/memory/lapis/conversation-hashes.ts": {
       "countedLines": 51,
       "physicalLines": 56,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/lapis/conversation-ingest.ts": {
+      "countedLines": 188,
+      "physicalLines": 195,
       "forbiddenImportCount": 0
     },
     "src/memory/lapis/conversation-paths.ts": {
@@ -511,6 +526,11 @@
       "physicalLines": 178,
       "forbiddenImportCount": 0
     },
+    "src/memory/lapis/episode-documents.ts": {
+      "countedLines": 224,
+      "physicalLines": 239,
+      "forbiddenImportCount": 0
+    },
     "src/memory/lapis/evidence-port.ts": {
       "countedLines": 22,
       "physicalLines": 23,
@@ -526,6 +546,26 @@
       "physicalLines": 50,
       "forbiddenImportCount": 0
     },
+    "src/memory/lapis/memory-consolidate.ts": {
+      "countedLines": 228,
+      "physicalLines": 230,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/lapis/memory-forget.ts": {
+      "countedLines": 222,
+      "physicalLines": 227,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/lapis/memory-inspect.ts": {
+      "countedLines": 256,
+      "physicalLines": 260,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/lapis/memory-limits.ts": {
+      "countedLines": 5,
+      "physicalLines": 5,
+      "forbiddenImportCount": 0
+    },
     "src/memory/lapis/memory-record-store.ts": {
       "countedLines": 296,
       "physicalLines": 322,
@@ -536,17 +576,25 @@
       "physicalLines": 170,
       "forbiddenImportCount": 0
     },
+    "src/memory/lapis/memory-search.ts": {
+      "countedLines": 256,
+      "physicalLines": 263,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/lapis/native-memory-host.ts": {
+      "countedLines": 22,
+      "physicalLines": 24,
+      "forbiddenImportCount": 0
+    },
     "src/memory/lapis/native-memory-service.test.ts": {
       "countedLines": 179,
       "physicalLines": 179,
       "forbiddenImportCount": 0
     },
     "src/memory/lapis/native-memory-service.ts": {
-      "countedLines": 1665,
-      "physicalLines": 1727,
-      "forbiddenImportCount": 0,
-      "kind": "legacy",
-      "justification": "Lapis memory compatibility; split with the extracted production boundary"
+      "countedLines": 119,
+      "physicalLines": 132,
+      "forbiddenImportCount": 0
     },
     "src/memory/lapis/paths.ts": {
       "countedLines": 74,
@@ -556,6 +604,11 @@
     "src/memory/lapis/runtime-consolidation-provider.ts": {
       "countedLines": 189,
       "physicalLines": 201,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/lapis/search-ranking.ts": {
+      "countedLines": 210,
+      "physicalLines": 223,
       "forbiddenImportCount": 0
     },
     "src/memory/lapis/types.ts": {
