@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "sourceCommit": "befd2dc6925c8cd0378136fb7aad42b440f340c0",
+  "sourceCommit": "ea876fda24d20c049e40dd5110d91a89d354672a",
   "limits": {
     "newProductionCountedLines": 300,
     "newTestCountedLines": 500,
@@ -429,6 +429,11 @@
       "physicalLines": 23,
       "forbiddenImportCount": 0
     },
+    "src/memory/group/claim-extract.ts": {
+      "countedLines": 81,
+      "physicalLines": 87,
+      "forbiddenImportCount": 0
+    },
     "src/memory/group/config.ts": {
       "countedLines": 19,
       "physicalLines": 21,
@@ -444,9 +449,54 @@
       "physicalLines": 6,
       "forbiddenImportCount": 0
     },
+    "src/memory/group/generated-projection.ts": {
+      "countedLines": 112,
+      "physicalLines": 113,
+      "forbiddenImportCount": 0
+    },
     "src/memory/group/index.ts": {
       "countedLines": 4,
       "physicalLines": 4,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/group/memory-constants.ts": {
+      "countedLines": 13,
+      "physicalLines": 15,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/group/memory-embeddings.ts": {
+      "countedLines": 56,
+      "physicalLines": 60,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/group/memory-host.ts": {
+      "countedLines": 14,
+      "physicalLines": 15,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/group/memory-index.ts": {
+      "countedLines": 223,
+      "physicalLines": 228,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/group/memory-lifecycle.ts": {
+      "countedLines": 185,
+      "physicalLines": 194,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/group/memory-query.ts": {
+      "countedLines": 176,
+      "physicalLines": 179,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/group/memory-types.ts": {
+      "countedLines": 61,
+      "physicalLines": 70,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/group/search-hits.ts": {
+      "countedLines": 156,
+      "physicalLines": 169,
       "forbiddenImportCount": 0
     },
     "src/memory/group/service.test.ts": {
@@ -455,11 +505,9 @@
       "forbiddenImportCount": 0
     },
     "src/memory/group/service.ts": {
-      "countedLines": 981,
-      "physicalLines": 1036,
-      "forbiddenImportCount": 0,
-      "kind": "legacy",
-      "justification": "Group memory compatibility; split with the extracted production boundary"
+      "countedLines": 137,
+      "physicalLines": 155,
+      "forbiddenImportCount": 0
     },
     "src/memory/group/store-port.ts": {
       "countedLines": 219,

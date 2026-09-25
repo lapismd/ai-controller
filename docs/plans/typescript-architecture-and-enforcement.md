@@ -54,7 +54,8 @@ src/
 - **P2.** Extract `native-memory-service`, `memory/group/service`, `engine`,
   `store`, `server`, and `client` until new production files stay at or under
   300 counted lines. Lapis native memory now delegates ingest, search, inspect,
-  forget, and consolidation to named modules.
+  forget, and consolidation to named modules. Group memory search, claims, and
+  lifecycle are extracted.
 
 ## Import matrix (summary)
 

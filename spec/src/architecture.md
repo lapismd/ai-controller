@@ -140,7 +140,8 @@ Building alone still does not install or start a service.
 Production source already lives under `auth`, `capture`, `cli`, `domain`,
 `execution`, `memory`, `persistence`, and `transport`. Lapis memory episode
 documents, search ranking, ingest, inspect, forget, and consolidation live as named
-modules under `src/memory/lapis/`. Residual root files are
+modules under `src/memory/lapis/`. Group memory search, claims, and lifecycle
+live as named modules under `src/memory/group/`. Residual root files are
 public facades (`client`, `runtime`, `managed`, `contracts`) or composition
 roots (`index`, `main`, `service`). For AIC-ARCH-001 and AIC-ARCH-002,
 `scripts/check-architecture.mjs` enforces counted-line budgets and that
