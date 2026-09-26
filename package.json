@@ -34,6 +34,10 @@
       "types": "./dist/memory/group/index.d.ts",
       "import": "./dist/memory/group/index.js"
     },
+    "./memory/embeddings": {
+      "types": "./dist/memory/embeddings/index.d.ts",
+      "import": "./dist/memory/embeddings/index.js"
+    },
     "./runtime": {
       "types": "./dist/runtime.d.ts",
       "import": "./dist/runtime.js"
@@ -76,6 +80,14 @@
     "publint": "^0.3.12",
     "typescript": "^5.9.3",
     "vitest": "^4.1.0"
+  },
+  "peerDependencies": {
+    "node-llama-cpp": "3.18.1"
+  },
+  "peerDependenciesMeta": {
+    "node-llama-cpp": {
+      "optional": true
+    }
   },
   "packageManager": "pnpm@10.34.5",
   "engines": {

@@ -39,6 +39,35 @@ it("does not warm embeddings during service start", async () => {
   expect(embed).not.toHaveBeenCalled();
 });
 
+it("awaits an explicit vector-only rebuild and reports failures", async () => {
+  const documents = [document, { ...document, documentId: "two" }];
+  const ready = new Set<string>();
+  const store = {
+    invalidateSearchEmbeddings: vi.fn(() => 3),
+    pendingSearchDocuments: () => documents.filter(({ documentId }) => !ready.has(documentId)),
+    searchDocument: (id: string) => documents.find(({ documentId }) => documentId === id),
+    putSearchEmbedding: ({ documentId }: { documentId: string }) => ready.add(documentId),
+    putSearchEmbeddingError: vi.fn(),
+  } as unknown as MemoryStorePort;
+  const embed = vi.fn(async () => [Array(384).fill(1), Array(384).fill(1)]);
+  const memory = new ControllerMemoryService(store, {
+    enabled: true, historyRetentionDays: 30, backfillDays: 7,
+    embeddings: { enabled: true, modelId: "test" },
+  }, {
+    embeddingProvider: { modelId: "test", modelRevision: "1", embed, close: async () => {} },
+    capture: { clean: <T>(value: T) => value, close() {} },
+  });
+
+  await expect(memory.rebuildEmbeddings("group")).resolves.toEqual({
+    invalidated: 3,
+    requested: 2,
+    embedded: 2,
+    failed: 0,
+  });
+  expect(embed).toHaveBeenCalledTimes(1);
+  await memory.close();
+});
+
 for (const failure of ["read", "write"] as const) {
   it(`contains a capture failure during background embedding ${failure} without retrying or exposing input`, async () => {
     const captureFailure = new Error("capture_rejected");

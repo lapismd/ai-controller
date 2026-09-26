@@ -1,7 +1,8 @@
 export interface MemoryEmbeddingDefinition {
   enabled: boolean;
   modelId: string;
-  revision?: string;
+  cacheDir?: string;
+  idleTimeoutMs?: number;
 }
 
 export interface MemoryGenerationDefinition {

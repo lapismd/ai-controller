@@ -21,6 +21,10 @@ import {
   recallGroupMemory,
   searchGroupMemory,
 } from "./memory-query.js";
+import {
+  rebuildEmbeddingIndex,
+  type EmbeddingRebuildResult,
+} from "./memory-embeddings.js";
 import type {
   ControllerMemoryServiceOptions,
   GeneratedMemoryProjection,
@@ -102,6 +106,10 @@ export class ControllerMemoryService implements MemoryReader {
 
   rebuild(partitionKey?: string): number {
     return rebuildGroupMemory(this.#host, partitionKey);
+  }
+
+  rebuildEmbeddings(partitionKey?: string): Promise<EmbeddingRebuildResult> {
+    return rebuildEmbeddingIndex(this.#host, partitionKey);
   }
 
   approveCandidate(candidateId: string): StoredMemory {

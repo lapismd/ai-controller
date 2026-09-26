@@ -506,18 +506,18 @@
       "forbiddenImportCount": 0
     },
     "src/memory/group/config.ts": {
-      "countedLines": 19,
-      "physicalLines": 21,
+      "countedLines": 20,
+      "physicalLines": 22,
       "forbiddenImportCount": 0
     },
     "src/memory/group/embedding-lifecycle.test.ts": {
-      "countedLines": 113,
-      "physicalLines": 119,
+      "countedLines": 140,
+      "physicalLines": 148,
       "forbiddenImportCount": 0
     },
     "src/memory/group/embedding-port.ts": {
-      "countedLines": 6,
-      "physicalLines": 6,
+      "countedLines": 10,
+      "physicalLines": 11,
       "forbiddenImportCount": 0
     },
     "src/memory/group/generated-projection.ts": {
@@ -526,8 +526,8 @@
       "forbiddenImportCount": 0
     },
     "src/memory/group/index.ts": {
-      "countedLines": 4,
-      "physicalLines": 4,
+      "countedLines": 15,
+      "physicalLines": 15,
       "forbiddenImportCount": 0
     },
     "src/memory/group/memory-constants.ts": {
@@ -536,8 +536,8 @@
       "forbiddenImportCount": 0
     },
     "src/memory/group/memory-embeddings.ts": {
-      "countedLines": 68,
-      "physicalLines": 72,
+      "countedLines": 109,
+      "physicalLines": 116,
       "forbiddenImportCount": 0
     },
     "src/memory/group/memory-host.ts": {
@@ -576,8 +576,8 @@
       "forbiddenImportCount": 0
     },
     "src/memory/group/service.ts": {
-      "countedLines": 137,
-      "physicalLines": 155,
+      "countedLines": 144,
+      "physicalLines": 163,
       "forbiddenImportCount": 0
     },
     "src/memory/group/store-port.ts": {

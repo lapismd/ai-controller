@@ -47,7 +47,7 @@ export async function recallGroupMemory(
   let timedOut = false;
   if (host.embedding) {
     const embedded = await withDeadline(
-      host.embedding.embed([text]),
+      host.embedding.embed([text], "query"),
       RECALL_DEADLINE_MS,
     );
     timedOut = embedded.timedOut;
@@ -123,7 +123,7 @@ export async function searchGroupMemory(
   let vector: SearchHit[] = [];
   if (host.embedding) {
     try {
-      const [queryVector] = await host.embedding.embed([text]);
+      const [queryVector] = await host.embedding.embed([text], "query");
       signal?.throwIfAborted();
       if (queryVector)
         vector = host.store

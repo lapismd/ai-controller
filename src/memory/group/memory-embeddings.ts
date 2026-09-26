@@ -70,3 +70,47 @@ export async function runEmbeddingQueue(
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
   }
 }
+
+export interface EmbeddingRebuildResult {
+  invalidated: number;
+  requested: number;
+  embedded: number;
+  failed: number;
+}
+
+export async function rebuildEmbeddingIndex(
+  host: ControllerMemoryHost,
+  partitionKey?: string,
+): Promise<EmbeddingRebuildResult> {
+  if (!host.embedding) {
+    throw new Error("Memory embeddings are disabled");
+  }
+  const { modelId, modelRevision } = host.embedding;
+  const invalidated = host.store.invalidateSearchEmbeddings(
+    modelId,
+    modelRevision,
+  );
+  const documents = host.store.pendingSearchDocuments(
+    modelId,
+    modelRevision,
+    Number.MAX_SAFE_INTEGER,
+    partitionKey,
+  );
+  documents.forEach(({ documentId }) => host.embeddingQueue.add(documentId));
+  drainEmbeddings(host);
+  await host.embeddingDrain;
+
+  const attempted = new Set(documents.map(({ documentId }) => documentId));
+  const failed = host.store.pendingSearchDocuments(
+    modelId,
+    modelRevision,
+    Number.MAX_SAFE_INTEGER,
+    partitionKey,
+  ).filter(({ documentId }) => attempted.has(documentId)).length;
+  return {
+    invalidated,
+    requested: documents.length,
+    embedded: documents.length - failed,
+    failed,
+  };
+}
