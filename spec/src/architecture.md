@@ -53,7 +53,7 @@ Endpoint disposal revokes tools, context and memory registrations immediately.
 | AIC-TOOL-001 | Tool invocation identity, execution outcome and result delivery MUST be distinct. Non-idempotent unknown outcomes MUST NOT be redispatched automatically.                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | AIC-TOOL-002 | Native observed tool activity MUST NOT invoke an application handler. Approval and structured input MUST use distinct typed interactions, authority and liveness checks.                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | AIC-TOOL-003 | When a `ToolCapture` port is configured, mutating `callTool` invocations MUST begin a cooperative span before `endpoint.execute` and finish it after. Capture unavailability MUST fail closed and MUST NOT execute the tool. Stream-only activity MUST use optional `observe` without an exclusive lease and MUST NOT fail the turn. The published controller MUST NOT depend on `jj-checkpoint`.                                                                                                                                                                                                                                  |
-| AIC-MEM-001  | Shared memory MUST use authorized storage, search and evidence ports. Consumer adapters MUST retain domain scope authority and source data without implementing a second recall pipeline.                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| AIC-MEM-001  | Shared memory MUST use authorized storage, search and evidence ports. Consumer adapters MUST retain domain scope authority and source data without implementing a second recall pipeline. Service startup MUST NOT warm vector embeddings; embeddings MAY run for new indexed data, explicit rebuilds, or live vector queries.                                                                                                                                                                                                                                                                                                                                                                     |
 | AIC-MEM-002  | Recall MUST preserve the selected policy profile, three-record and 900-token default limits, verified evidence, and a 150ms warmed deadline. Injected context MUST remain separate from authored messages.                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | AIC-MEM-003  | Maintenance MUST use durable operation identities. Forget exclusions MUST survive rebuilding, and derived replay MUST NOT cause duplicate learning or rewrite source evidence.                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | AIC-API-001  | Every API operation MUST authorize its principal and object scope. The shared client MUST own reconnect and atomic snapshot/event application without resubmitting mutations.                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
@@ -85,7 +85,10 @@ vault/database access; the shared module never imports App, Vault or UI code.
 The group-memory compatibility profile shares ranking policy with the vault
 profile and receives scoped evidence/search/mutation ports. It preserves the
 existing partition and record schema. Embedding workers are injected resources;
-this package does not construct a consumer's worker, relay client or signer.
+startup rebuilds lexical search documents without warming vector embeddings, and
+embedding queues run only for new indexed data, explicit rebuilds, or live
+vector queries. This package does not construct a consumer's worker, relay
+client or signer.
 
 The shared runtime facade exposes application-neutral session events over the SDK.
 It resolves lost turn acknowledgements by command identity and does not retry with
@@ -130,7 +133,13 @@ The runtime preparation port receives the reserved logical thread identity befor
 registration so consumers can reconnect the same authorized context endpoint.
 
 CLI compilation stages installed runtime packages in an isolated temporary tree.
-Previous executables and extraction caches never enter the next executable.
+The staged production dependency tree is pruned before compile so source maps,
+type declarations, test/spec files, and test/example/benchmark directories do
+not enter the executable payload. The staged source has already passed the Node
+type-check/build lane, so Deno compile skips type-checking after declarations are
+removed. The compiled executable is not self-extracting, and the build removes
+`artifacts/.lapis-ai-controller` before replacing the artifact. Previous
+executables and extraction caches never enter the next executable.
 `pnpm local:controller` is the developer install path: it builds that executable,
 replaces `~/.local/bin/lapis-ai-controller` atomically, initializes the default
 config only when missing using `--workspace` or `~/.lapis/ai-controller`, then

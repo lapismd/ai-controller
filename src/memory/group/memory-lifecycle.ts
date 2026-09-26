@@ -1,6 +1,5 @@
 import { recordGeneratedProjection } from "./generated-projection.js";
 import { deterministicId } from "./memory-constants.js";
-import { drainEmbeddings } from "./memory-embeddings.js";
 import type { ControllerMemoryHost } from "./memory-host.js";
 import {
   indexEvidence,
@@ -22,24 +21,11 @@ export function startGroupMemory(
       host.store.isEvidenceExcluded(evidence)
     )
       continue;
-    indexEvidence(host, evidence);
+    indexEvidence(host, evidence, { queueEmbedding: false });
     learnFromEvidence(host, evidence);
   }
   for (const memory of host.store.memories(partitionKey))
-    indexMemory(host, memory);
-  if (!host.embedding) return;
-  host.store.invalidateSearchEmbeddings(
-    host.embedding.modelId,
-    host.embedding.modelRevision,
-  );
-  for (const document of host.store.pendingSearchDocuments(
-    host.embedding.modelId,
-    host.embedding.modelRevision,
-    10_000,
-    partitionKey,
-  ))
-    host.embeddingQueue.add(document.documentId);
-  drainEmbeddings(host);
+    indexMemory(host, memory, { queueEmbedding: false });
 }
 
 export function ingestEvidence(

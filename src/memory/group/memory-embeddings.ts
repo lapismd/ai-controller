@@ -22,15 +22,36 @@ export async function runEmbeddingQueue(
   while (host.embedding && !host.embeddingStopped && host.embeddingQueue.size) {
     const ids = [...host.embeddingQueue].slice(0, 16);
     ids.forEach((id) => host.embeddingQueue.delete(id));
-    const documents = ids
-      .map((id) => host.store.searchDocument(id))
-      .filter((item): item is StoredSearchDocument => Boolean(item));
-    if (!documents.length) continue;
+    let documents: StoredSearchDocument[];
     try {
-      const vectors = await host.embedding.embed(
+      documents = ids
+        .map((id) => host.store.searchDocument(id))
+        .filter((item): item is StoredSearchDocument => Boolean(item));
+    } catch {
+      return;
+    }
+    if (!documents.length) continue;
+    let vectors: number[][];
+    try {
+      vectors = await host.embedding.embed(
         documents.map(({ content }) => content),
       );
+    } catch {
       if (host.embeddingStopped) return;
+      for (const document of documents)
+        host.store.putSearchEmbeddingError({
+          documentId: document.documentId,
+          modelId: host.embedding.modelId,
+          modelRevision: host.embedding.modelRevision,
+          contentHash: document.contentHash,
+          error: "embedding_failed",
+          updatedAt: host.now(),
+        });
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      continue;
+    }
+    if (host.embeddingStopped) return;
+    try {
       for (const [index, document] of documents.entries()) {
         const vector = vectors[index];
         if (!vector?.length) throw new Error("Embedding result is missing");
@@ -44,16 +65,7 @@ export async function runEmbeddingQueue(
         });
       }
     } catch {
-      if (host.embeddingStopped) return;
-      for (const document of documents)
-        host.store.putSearchEmbeddingError({
-          documentId: document.documentId,
-          modelId: host.embedding.modelId,
-          modelRevision: host.embedding.modelRevision,
-          contentHash: document.contentHash,
-          error: "embedding_failed",
-          updatedAt: host.now(),
-        });
+      return;
     }
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
   }

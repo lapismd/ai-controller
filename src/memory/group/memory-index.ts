@@ -52,10 +52,15 @@ export function evidenceDocument(
 export function indexEvidence(
   host: ControllerMemoryHost,
   evidence: StoredEvidence,
+  options: { queueEmbedding?: boolean } = {},
 ): void {
   const document = evidenceDocument(evidence, host.now());
   host.store.upsertSearchDocument(document);
-  if (host.embedding && evidence.status === "active") {
+  if (
+    options.queueEmbedding !== false &&
+    host.embedding &&
+    evidence.status === "active"
+  ) {
     host.embeddingQueue.add(document.documentId);
     drainEmbeddings(host);
   }
@@ -142,6 +147,7 @@ export function learnFromEvidence(
 export function indexMemory(
   host: ControllerMemoryHost,
   memory: StoredMemory,
+  options: { queueEmbedding?: boolean } = {},
 ): void {
   const contentHash = createHash("sha256")
     .update(
@@ -174,7 +180,11 @@ export function indexMemory(
     updatedAt: memory.updatedAt,
   };
   host.store.upsertSearchDocument(document);
-  if (host.embedding && memory.status === "active") {
+  if (
+    options.queueEmbedding !== false &&
+    host.embedding &&
+    memory.status === "active"
+  ) {
     host.embeddingQueue.add(document.documentId);
     drainEmbeddings(host);
   }

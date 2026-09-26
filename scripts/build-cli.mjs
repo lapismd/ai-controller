@@ -1,4 +1,4 @@
-import { cp, mkdtemp, readFile, rm, writeFile, mkdir } from "node:fs/promises";
+import { cp, mkdtemp, readFile, readdir, rm, writeFile, mkdir, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createRequire } from "node:module";
@@ -6,6 +6,16 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 const require = createRequire(import.meta.url);
 const stage = await mkdtemp(join(tmpdir(), "lapis-ai-controller-build-"));
+const NON_PRODUCTION_FILE_SUFFIXES = [".map", ".d.ts", ".d.cts", ".d.mts"];
+const NON_PRODUCTION_DIRS = new Set([
+  "__tests__",
+  "test",
+  "tests",
+  "bench",
+  "benchmark",
+  "example",
+  "examples",
+]);
 function run(command, args, cwd = stage) {
   const result = spawnSync(command, args, { cwd, stdio: "inherit" });
   if (result.error) throw result.error;
@@ -58,11 +68,13 @@ try {
     JSON.stringify({ private: true, type: "module", dependencies }),
   );
   run("pnpm", ["install", "--prod", "--ignore-scripts", "--lockfile=false"]);
+  await pruneNonProductionPayload(join(stage, "node_modules"));
+  await assertNoNonProductionPayload(join(stage, "node_modules"));
   run("deno", [
     "compile",
     "--no-config",
+    "--no-check",
     "--node-modules-dir=manual",
-    "--self-extracting",
     "-A",
     "--exclude",
     "packages",
@@ -74,8 +86,64 @@ try {
     "controller",
     "main.js",
   ]);
+  await assertNoExtractCache(stage, "controller");
   await mkdir("artifacts", { recursive: true });
+  await rm(resolve("artifacts/.lapis-ai-controller"), {
+    recursive: true,
+    force: true,
+  });
   await cp(join(stage, "controller"), resolve("artifacts/lapis-ai-controller"));
+  await assertNoExtractCache(resolve("artifacts"), "lapis-ai-controller");
 } finally {
   await rm(stage, { recursive: true, force: true });
+}
+
+async function assertNoExtractCache(directory, binaryName) {
+  try {
+    await stat(join(directory, `.${binaryName}`));
+  } catch (error) {
+    if (error.code === "ENOENT") return;
+    throw error;
+  }
+  throw new Error(`Compiled CLI created unexpected extract cache .${binaryName}`);
+}
+
+async function pruneNonProductionPayload(directory) {
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      if (NON_PRODUCTION_DIRS.has(entry.name)) {
+        await rm(path, { recursive: true, force: true });
+        continue;
+      }
+      await pruneNonProductionPayload(path);
+      continue;
+    }
+    if (entry.isFile() && isNonProductionFile(entry.name)) {
+      await rm(path, { force: true });
+    }
+  }
+}
+
+async function assertNoNonProductionPayload(directory) {
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      if (NON_PRODUCTION_DIRS.has(entry.name)) {
+        throw new Error(`Compiled CLI payload includes non-production directory ${path}`);
+      }
+      await assertNoNonProductionPayload(path);
+      continue;
+    }
+    if (entry.isFile() && isNonProductionFile(entry.name)) {
+      throw new Error(`Compiled CLI payload includes non-production file ${path}`);
+    }
+  }
+}
+
+function isNonProductionFile(name) {
+  return (
+    NON_PRODUCTION_FILE_SUFFIXES.some((suffix) => name.endsWith(suffix)) ||
+    /\.(?:test|spec)\.[cm]?[jt]sx?$/.test(name)
+  );
 }
