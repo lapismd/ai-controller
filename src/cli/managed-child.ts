@@ -68,6 +68,8 @@ export async function runManagedChild(): Promise<void> {
   ]);
   const ready: ManagedReady = {
     schema: "lapis-ai-controller.ready/1",
+    build: (globalThis as { __LAPIS_CLI_BUILD__?: ManagedReady["build"] })
+      .__LAPIS_CLI_BUILD__,
     url: running.url,
     workspace: "default",
     capturePolicy: running.capturePolicy,

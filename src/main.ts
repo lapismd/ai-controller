@@ -1,8 +1,11 @@
+import { runRedactionSmoke } from "./cli/redaction-smoke.js";
 import { runCli } from "./cli/main.js";
 import { runManagedChild } from "./cli/managed-child.js";
 import { runMcpShim } from "@lapismd/ai-host";
 const argv = process.argv.slice(2);
 if (argv[0] === "__internal" && argv[1] === "mcp-shim") await runMcpShim();
+else if (argv[0] === "__internal" && argv[1] === "redaction-smoke")
+  runRedactionSmoke();
 else if (argv[0] === "__internal" && argv[1] === "managed") {
   try {
     await runManagedChild();

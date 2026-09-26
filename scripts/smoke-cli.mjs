@@ -1,3 +1,5 @@
+import { ManagedControllerProcess } from "../dist/managed.js";
+import { installRuntime } from "./runtime-install.mjs";
 import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
 import { mkdtemp, readFile, writeFile, rm } from "node:fs/promises";
@@ -6,8 +8,10 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import assert from "node:assert/strict";
 const exec = promisify(execFile);
-const binary = resolve("artifacts/lapis-ai-controller");
 const root = await mkdtemp(join(tmpdir(), "controller-smoke-"));
+const { path: binary } = await installRuntime(resolve("artifacts/runtime"), {
+  home: root,
+});
 const configPath = join(root, "config.json");
 const call = async (...args) =>
   JSON.parse(
@@ -85,8 +89,17 @@ try {
     (await call("threads", "show", "--thread", thread.id)).data.thread.id,
     thread.id,
   );
+  const managed = await ManagedControllerProcess.start({
+    workspace: root, database: join(root, "managed.sqlite"),
+    env: { PATH: process.env.PATH, HOME: root }, executable: { command: binary },
+  });
+  try {
+    const manifest = JSON.parse(await readFile(resolve("artifacts/runtime/runtime-manifest.json"), "utf8"));
+    assert.deepEqual(managed.connection.build, manifest.build);
+    assert.equal(managed.child.spawnargs.includes(managed.connection.token), false);
+  } finally { await managed.close(); }
   console.log(
-    "Compiled Deno CLI: init, authenticated service, providers, threads, restart and shutdown passed",
+    "Installed Deno CLI: init, authenticated service, providers, threads, restart, managed build identity and shutdown passed",
   );
 } finally {
   await stop();

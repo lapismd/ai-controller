@@ -31,8 +31,8 @@ Defaults are `~/.config/lapis-ai-controller/config.json`,
 Override with `--config`, `--instance`, `--install-path`, or `--workspace` after
 `--`. The command never prints tokens or private payloads.
 
-To run a checkout-local binary without installing a user service, build with
-`pnpm build:cli` and invoke `artifacts/lapis-ai-controller` directly. Native
+To install a checkout snapshot without installing a user service, use
+`deno task install:cli` and invoke `lapis-ai-controller` on PATH. Native
 agent executables and credentials remain separate dependencies. During the
 unpublished migration, use the temporary package validation setup documented
 in [the migration record](spec/records/migration.md).
@@ -81,3 +81,33 @@ Native Codex MCP servers share their parent environment: configured values for
 the same environment variable must agree across servers. Conflicting values and
 reserved `LAPIS_TOOL_BRIDGE_*` names fail before launch. ACP supports separate
 per-server environments. Secrets are never placed in native process arguments.
+
+## Installed Deno CLI
+
+Install Deno 2.9.5 or newer, then run `deno task install:cli` in this checkout.
+The command installs a verified snapshot and a launcher in `~/.local/bin`;
+add that directory to `PATH` once. Run `lapis-ai-controller --help` from any directory.
+Use `deno task install:cli --install-path /absolute/path/lapis-ai-controller` to
+choose another launcher location, or `--home /temporary/home` for acceptance.
+Code and dependencies live under `~/.local/lib/lapis-ai-controller/releases/<digest>`.
+Re-run installation to update; checkout edits do not affect installed snapshots.
+Installation does not restart a running service. Existing operator lifecycle
+commands retain their explicit service activation behavior.
+
+The artifact requires external Deno; it contains no Deno executable. Previous
+snapshots are retained for processes that still use them. The launcher records
+the Deno path, so reinstall the CLI if Deno moves. Runtime packages include a
+file inventory and SHA-256 digest; build revision is captured during packaging.
+
+`deno task build` creates `artifacts/runtime` and `artifacts/jsr`.
+`deno task test:runtime` checks snapshot installation, and `deno task jsr:check`
+validates publication without uploading. Once this package and its dependencies
+are released, version-pinned JSR installation will be:
+
+```sh
+deno install --global --root ~/.local --allow-all --name lapis-ai-controller jsr:@lapismd/ai-controller@VERSION/cli
+```
+
+Replace `VERSION` with a released version. JSR publishing is a separate manual
+step. Published manifests use registry dependencies; ignored `deno.local.json`
+overrides are materialized only for local runtime validation, never published.

@@ -19,8 +19,14 @@ export function currentSelfInvocation(): SelfInvocation {
       argsPrefix: [
         "run",
         "-A",
-        "--sloppy-imports",
-        fileURLToPath(deno.mainModule),
+        ...(process.env.LAPIS_CLI_RELEASE
+          ? ["--no-config", "--no-lock", "--node-modules-dir=manual"]
+          : deno.mainModule.startsWith("file:")
+            ? ["--sloppy-imports"]
+            : ["--no-config", "--no-lock", "--node-modules-dir=none"]),
+        deno.mainModule.startsWith("file:")
+          ? fileURLToPath(deno.mainModule)
+          : deno.mainModule,
       ],
     };
   if (!process.argv[1]) throw new Error("Controller entrypoint is unavailable");

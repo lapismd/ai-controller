@@ -6,6 +6,9 @@
     "build": "pnpm build && node scripts/build-cli.mjs",
     "serve": "pnpm build && deno run -A dist/main.js serve",
     "local:controller": "node scripts/local-controller.mjs",
-    "spec:check": "pnpm spec:check"
+    "spec:check": "pnpm spec:check",
+    "install:cli": "deno task build && deno run --no-config --no-lock --node-modules-dir=manual -A scripts/install-cli.mjs",
+    "test:runtime": "deno test -A --no-config --no-lock --node-modules-dir=manual scripts/runtime-install.test.ts",
+    "jsr:check": "deno publish --dry-run --config artifacts/jsr/deno.json"
   }
 }

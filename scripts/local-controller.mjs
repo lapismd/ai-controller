@@ -1,8 +1,8 @@
+import { installRuntime } from "./runtime-install.mjs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  installExecutable,
   pathExists,
   runLocalController,
   spawnCommand,
@@ -22,7 +22,8 @@ try {
     {
       log: (text) => console.log(text),
       exists: pathExists,
-      install: installExecutable,
+      install: (source, target) =>
+        installRuntime(source, { installPath: target }),
       async run(command, args, cwd) {
         const failure = await spawnCommand(command, args, cwd);
         if (failure) process.exit(failure.code);

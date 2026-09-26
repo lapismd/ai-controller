@@ -10,4 +10,4 @@ await build({
   format: "esm",
   target: "node22",
 });
-console.log("Controller executable bundled");
+console.log("Controller CLI modules bundled");

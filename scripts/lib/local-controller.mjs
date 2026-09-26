@@ -53,7 +53,8 @@ export function resolveSelection({
   env = process.env,
   options = {},
 } = {}) {
-  if (!home) throw new Error("HOME is required for local controller development");
+  if (!home)
+    throw new Error("HOME is required for local controller development");
   const configHome = env.XDG_CONFIG_HOME?.trim() || join(home, ".config");
   const configFile = resolve(
     options.configFile ??
@@ -109,7 +110,10 @@ export async function installExecutable(source, target) {
   }
 }
 
-export async function waitForReady(invoke, { deadlineMs = READY_DEADLINE_MS } = {}) {
+export async function waitForReady(
+  invoke,
+  { deadlineMs = READY_DEADLINE_MS } = {},
+) {
   const deadline = Date.now() + deadlineMs;
   while (Date.now() < deadline) {
     const result = await invoke();
@@ -137,7 +141,7 @@ export async function runLocalController(
     home = process.env.HOME || homedir(),
     env = process.env,
     root,
-    artifact = join(root, "artifacts", BINARY),
+    artifact = join(root, "artifacts", "runtime"),
   },
   io,
 ) {
@@ -181,10 +185,7 @@ export async function runLocalController(
       controllerArgs(["status", "--json"], selection),
     ),
   );
-  await io.run(
-    selection.installPath,
-    controllerArgs(["doctor"], selection),
-  );
+  await io.run(selection.installPath, controllerArgs(["doctor"], selection));
   io.log(`Local controller is ready via ${selection.installPath}.`);
   return 0;
 }
@@ -197,7 +198,9 @@ export function spawnCommand(command, args, cwd) {
     });
     child.once("error", reject);
     child.once("exit", (code) => {
-      resolvePromise(code === 0 ? undefined : { failed: true, code: code ?? 1 });
+      resolvePromise(
+        code === 0 ? undefined : { failed: true, code: code ?? 1 },
+      );
     });
   });
 }

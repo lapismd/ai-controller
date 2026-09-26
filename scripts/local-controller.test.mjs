@@ -104,7 +104,7 @@ describe("local controller installer", () => {
     const dir = await mkdtemp(join(tmpdir(), "local-controller-run-"));
     const root = join(dir, "repo");
     const home = join(dir, "home");
-    const artifact = join(root, "artifacts", "lapis-ai-controller");
+    const artifact = join(root, "artifacts", "runtime");
     const commands = [];
     const logs = [];
     try {
@@ -144,15 +144,10 @@ describe("local controller installer", () => {
         },
       );
       expect(code).toBe(0);
-      expect(commands[0]).toEqual([
-        "run",
-        "pnpm",
-        "build:cli",
-        root,
-      ]);
-      expect(commands.some((entry) => entry[1] === "init" || entry.includes("init"))).toBe(
-        true,
-      );
+      expect(commands[0]).toEqual(["run", "pnpm", "build:cli", root]);
+      expect(
+        commands.some((entry) => entry[1] === "init" || entry.includes("init")),
+      ).toBe(true);
       expect(
         commands.find((entry) => entry[0] === "run" && entry[2] === "service"),
       ).toEqual([
@@ -168,10 +163,12 @@ describe("local controller installer", () => {
       ]);
       expect(logs.join("\n")).toContain("ready via");
       expect(logs.join("\n")).not.toContain("should-not-log");
-      expect(controllerArgs(["status", "--json"], {
-        configFile: "/tmp/config.json",
-        instance: "default",
-      })).toEqual([
+      expect(
+        controllerArgs(["status", "--json"], {
+          configFile: "/tmp/config.json",
+          instance: "default",
+        }),
+      ).toEqual([
         "status",
         "--json",
         "--config",
@@ -237,7 +234,7 @@ describe("local controller installer", () => {
     const commands = [];
     const home = "/tmp/home";
     const root = "/tmp/repo";
-    const artifact = join(root, "artifacts", "lapis-ai-controller");
+    const artifact = join(root, "artifacts", "runtime");
     await runLocalController(
       { args: [], home, env: {}, root, artifact },
       {

@@ -46,7 +46,7 @@
   "scripts": {
     "check": "tsc --noEmit && pnpm check:architecture && node scripts/check-boundaries.mjs",
     "check:architecture": "node scripts/check-architecture.mjs",
-    "test": "vitest run",
+    "test": "vitest run && deno task test:runtime",
     "build": "tsc && node scripts/bundle.mjs",
     "build:cli": "deno task build",
     "local:controller": "node scripts/local-controller.mjs",
@@ -56,7 +56,10 @@
     "spec:first": "spec-validator first",
     "publint": "publint",
     "docs:write": "tsc && node scripts/docs-cli.mjs",
-    "docs:check": "tsc && node scripts/docs-cli.mjs --check"
+    "docs:check": "tsc && node scripts/docs-cli.mjs --check",
+    "install:cli": "deno task install:cli",
+    "test:runtime": "deno task test:runtime",
+    "jsr:check": "deno task jsr:check"
   },
   "dependencies": {
     "@lapismd/ai-host": "^0.1.0",
@@ -76,6 +79,7 @@
   },
   "packageManager": "pnpm@10.34.5",
   "engines": {
-    "node": ">=22.13.0"
+    "node": ">=22.13.0",
+    "deno": ">=2.9.5"
   }
 }

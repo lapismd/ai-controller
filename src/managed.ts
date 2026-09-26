@@ -37,6 +37,7 @@ export interface ManagedReady {
   url: string;
   workspace: "default";
   capturePolicy?: string;
+  build?: { version: string; revision: string; builtAt: string };
 }
 /** Supervises the separate Deno executable. No execution engine is embedded here. */
 export class ManagedControllerProcess {
@@ -151,8 +152,7 @@ export class ManagedControllerProcess {
       return new ManagedControllerProcess(child, { ...frame, token });
     } catch (error) {
       child.kill("SIGKILL");
-      const detail =
-        error instanceof Error ? error.message : "startup failed";
+      const detail = error instanceof Error ? error.message : "startup failed";
       throw new ControllerError(
         "controller_start_failed",
         `Could not start the separate lapis-ai-controller executable: ${detail}`,

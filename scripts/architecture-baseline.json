@@ -33,8 +33,8 @@
       "forbiddenImportCount": 0
     },
     "scripts/build-cli.mjs": {
-      "countedLines": 143,
-      "physicalLines": 149,
+      "countedLines": 6,
+      "physicalLines": 6,
       "forbiddenImportCount": 0
     },
     "scripts/bundle.mjs": {
@@ -58,23 +58,23 @@
       "forbiddenImportCount": 0
     },
     "scripts/lib/local-controller.mjs": {
-      "countedLines": 201,
-      "physicalLines": 220,
+      "countedLines": 204,
+      "physicalLines": 223,
       "forbiddenImportCount": 0
     },
     "scripts/local-controller.mjs": {
-      "countedLines": 35,
-      "physicalLines": 37,
+      "countedLines": 36,
+      "physicalLines": 38,
       "forbiddenImportCount": 0
     },
     "scripts/local-controller.test.mjs": {
-      "countedLines": 266,
-      "physicalLines": 272,
+      "countedLines": 263,
+      "physicalLines": 269,
       "forbiddenImportCount": 0
     },
     "scripts/smoke-cli.mjs": {
-      "countedLines": 94,
-      "physicalLines": 94,
+      "countedLines": 107,
+      "physicalLines": 107,
       "forbiddenImportCount": 0
     },
     "src/auth/authorize.test.ts": {
@@ -155,8 +155,8 @@
       "justification": "CLI command table; split only if a later change needs room"
     },
     "src/cli/managed-child.ts": {
-      "countedLines": 88,
-      "physicalLines": 89,
+      "countedLines": 90,
+      "physicalLines": 91,
       "forbiddenImportCount": 0
     },
     "src/cli/output.ts": {
@@ -165,8 +165,8 @@
       "forbiddenImportCount": 0
     },
     "src/cli/self.ts": {
-      "countedLines": 28,
-      "physicalLines": 28,
+      "countedLines": 34,
+      "physicalLines": 34,
       "forbiddenImportCount": 0
     },
     "src/cli/service.ts": {
@@ -476,8 +476,8 @@
       "forbiddenImportCount": 0
     },
     "src/main.ts": {
-      "countedLines": 13,
-      "physicalLines": 13,
+      "countedLines": 16,
+      "physicalLines": 16,
       "forbiddenImportCount": 0
     },
     "src/managed.test.ts": {
