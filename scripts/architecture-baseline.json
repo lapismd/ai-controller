@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "sourceCommit": "812dd5617f7feb1fff3efbad4f6f8df7f86d1407",
+  "sourceCommit": "6cd43cbe5ffbb45408c32b21a20e539e3e87b666",
   "limits": {
     "newProductionCountedLines": 300,
     "newTestCountedLines": 500,
@@ -178,8 +178,8 @@
       "forbiddenImportCount": 0
     },
     "src/cli/config.ts": {
-      "countedLines": 195,
-      "physicalLines": 195,
+      "countedLines": 197,
+      "physicalLines": 197,
       "forbiddenImportCount": 0
     },
     "src/cli/main.ts": {
@@ -190,8 +190,8 @@
       "justification": "CLI command table; split only if a later change needs room"
     },
     "src/cli/managed-child.ts": {
-      "countedLines": 90,
-      "physicalLines": 91,
+      "countedLines": 96,
+      "physicalLines": 97,
       "forbiddenImportCount": 0
     },
     "src/cli/output.ts": {
@@ -536,6 +536,26 @@
     "src/execution/native-permission-mode.ts": {
       "countedLines": 11,
       "physicalLines": 13,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/opencode-events.ts": {
+      "countedLines": 105,
+      "physicalLines": 111,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/opencode-server.ts": {
+      "countedLines": 80,
+      "physicalLines": 87,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/opencode.test.ts": {
+      "countedLines": 127,
+      "physicalLines": 133,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/opencode.ts": {
+      "countedLines": 229,
+      "physicalLines": 241,
       "forbiddenImportCount": 0
     },
     "src/execution/process-host.ts": {
@@ -966,8 +986,8 @@
       "forbiddenImportCount": 0
     },
     "src/service.ts": {
-      "countedLines": 109,
-      "physicalLines": 111,
+      "countedLines": 112,
+      "physicalLines": 114,
       "forbiddenImportCount": 0
     },
     "src/transcript-contracts.ts": {

@@ -14,7 +14,7 @@ export interface ServiceConfig {
   workspaces: Record<string, string>;
   providers: Array<{
     id: string;
-    driver: "acp" | "codex-native";
+    driver: "acp" | "codex-native" | "opencode-native";
     agent: string;
   }>;
   credentials: Array<{ tokenFile: string; principal: Principal }>;
@@ -76,7 +76,7 @@ export function validateConfig(content: unknown): ServiceConfig {
     if (
       !/^[a-z0-9][a-z0-9._-]{0,63}$/.test(provider.id) ||
       ids.has(provider.id) ||
-      !["acp", "codex-native"].includes(provider.driver) ||
+      !["acp", "codex-native", "opencode-native"].includes(provider.driver) ||
       !/^[a-z0-9][a-z0-9._-]{0,63}$/.test(provider.agent)
     )
       throw new ControllerError(
@@ -149,7 +149,9 @@ export async function initialize(
     providers: [
       { id: "codex", driver: "acp", agent: "codex" },
       { id: "cursor", driver: "acp", agent: "cursor" },
+      { id: "opencode", driver: "acp", agent: "opencode" },
       { id: "codex-native", driver: "codex-native", agent: "codex" },
+      { id: "opencode-native", driver: "opencode-native", agent: "opencode-native" },
     ],
     credentials: [
       {
@@ -157,7 +159,7 @@ export async function initialize(
         principal: {
           id: "local",
           applicationId: "local",
-          providers: ["codex", "cursor", "codex-native"],
+          providers: ["codex", "cursor", "opencode", "codex-native", "opencode-native"],
           workspaces: ["default"],
           scopes: [...DEFAULT_SCOPES],
         },

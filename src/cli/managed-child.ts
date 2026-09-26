@@ -47,6 +47,12 @@ export async function runManagedChild(): Promise<void> {
       agent: "codex",
       driver: "codex-native",
     });
+  if (!providers.some((provider) => provider.id === "opencode-native"))
+    providers.push({
+      id: "opencode-native",
+      agent: "opencode-native",
+      driver: "opencode-native",
+    });
   const principal = {
     id: "managed",
     providers: providers.map((provider) => provider.id),

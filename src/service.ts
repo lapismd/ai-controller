@@ -11,6 +11,7 @@ import { Controller } from "./domain/engine.js";
 import { AcpProvider } from "./execution/acp.js";
 import { AcpWorkerPool } from "./execution/acp-worker-pool.js";
 import { CodexProvider } from "./execution/codex.js";
+import { OpenCodeProvider } from "./execution/opencode.js";
 import type { ExecutionProvider } from "./domain/ports.js";
 import { serveController } from "./transport/server.js";
 import type { ServiceConfig } from "./cli/config.js";
@@ -70,7 +71,9 @@ export async function startService(
             agentRegistry: registry,
             workerPool,
           })
-        : new CodexProvider(workspaces, { id: provider.id, shimCommand }),
+        : provider.driver === "opencode-native"
+          ? new OpenCodeProvider(workspaces, undefined, { id: provider.id, shimCommand, workerPool })
+          : new CodexProvider(workspaces, { id: provider.id, shimCommand }),
     ]),
   );
   const capture = new CaptureBoundary({
