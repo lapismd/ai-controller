@@ -68,11 +68,14 @@ export class LocalLlamaEmbeddingProvider implements EmbeddingProvider {
     if (!texts.length) return Promise.resolve([]);
     this.clearIdleTimer();
     return this.enqueue(async () => {
-      const session = await this.session();
-      const vectors = await session.embed(texts, purpose);
-      this.validateVectors(vectors, texts.length);
-      this.scheduleIdleDisposal();
-      return vectors;
+      try {
+        const session = await this.session();
+        const vectors = await session.embed(texts, purpose);
+        this.validateVectors(vectors, texts.length);
+        return vectors;
+      } finally {
+        this.scheduleIdleDisposal();
+      }
     });
   }
 

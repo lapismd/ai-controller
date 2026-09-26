@@ -78,14 +78,17 @@ describe("LocalLlamaEmbeddingProvider", () => {
   });
 
   it("rejects vectors with an unexpected model shape", async () => {
+    vi.useFakeTimers();
     const loaded = session();
     vi.mocked(loaded.embed).mockResolvedValueOnce([[1, 2]]);
     const provider = new LocalLlamaEmbeddingProvider(
-      {},
+      { idleTimeoutMs: 100 },
       { load: async () => loaded },
     );
 
     await expect(provider.embed(["bad shape"])).rejects.toThrow("invalid vectors");
+    await vi.advanceTimersByTimeAsync(100);
+    expect(loaded.close).toHaveBeenCalledOnce();
     await provider.close();
   });
 });
