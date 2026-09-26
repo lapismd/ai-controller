@@ -55,6 +55,8 @@ export interface ExecutionContext {
 }
 export interface ExecutionProvider {
   capabilities: Capabilities;
+  /** Operational snapshot only; no prompts, tool arguments or credentials. */
+  resources?(): Promise<unknown>;
   models?(
     workspace: string,
     options?: { sessionId?: string },

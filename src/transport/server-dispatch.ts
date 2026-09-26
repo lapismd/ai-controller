@@ -113,6 +113,21 @@ export function dispatch(
         id,
         capabilities: controller.providers.get(id)?.capabilities ?? null,
       }));
+    case "providers.resources": {
+      const id = String(p.provider);
+      if (!session.providers.includes(id))
+        throw new ControllerError("forbidden", "Provider is not authorized");
+      const provider = controller.providers.get(id);
+      if (!provider)
+        throw new ControllerError("provider_unavailable", "Provider unavailable");
+      return provider.resources?.() ?? {
+        status: "unavailable",
+        observedAt: Date.now(),
+        workers: { busy: 0, idle: 0, starting: 0, stopping: 0 },
+        sessions: 0,
+        rssBytes: null,
+      };
+    }
     case "threads.create": {
       if (
         !session.providers.includes(String(p.provider)) ||

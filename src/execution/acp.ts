@@ -78,6 +78,18 @@ export class AcpProvider implements ExecutionProvider {
   listAgents() {
     return this.#executor.listAcpAgents();
   }
+  async resources() {
+    const executor = this.#executor as AgentRuntimeExecutor & {
+      snapshotAcpResources?: () => Promise<unknown>;
+    };
+    return executor.snapshotAcpResources?.() ?? {
+      status: "unavailable",
+      observedAt: Date.now(),
+      workers: { busy: 0, idle: 0, starting: 0, stopping: 0 },
+      sessions: 0,
+      rssBytes: null,
+    };
+  }
   models(workspace: string, options?: { sessionId?: string; agent?: string }) {
     return this.#executor.listAcpModels(this.#sink, {
       agent: options?.agent ?? this.options.agent,

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "sourceCommit": "b6af5aa3455f19411aaf28ac0573bb81134700ad",
+  "sourceCommit": "74ede798024d3781f98de1f4554392c3b70cfcc0",
   "limits": {
     "newProductionCountedLines": 300,
     "newTestCountedLines": 500,
@@ -57,6 +57,11 @@
       "physicalLines": 11,
       "forbiddenImportCount": 0
     },
+    "scripts/install-cli.mjs": {
+      "countedLines": 10,
+      "physicalLines": 10,
+      "forbiddenImportCount": 0
+    },
     "scripts/lib/local-controller.mjs": {
       "countedLines": 204,
       "physicalLines": 223,
@@ -70,6 +75,36 @@
     "scripts/local-controller.test.mjs": {
       "countedLines": 263,
       "physicalLines": 269,
+      "forbiddenImportCount": 0
+    },
+    "scripts/runtime-build.mjs": {
+      "countedLines": 162,
+      "physicalLines": 164,
+      "forbiddenImportCount": 0
+    },
+    "scripts/runtime-install.mjs": {
+      "countedLines": 168,
+      "physicalLines": 169,
+      "forbiddenImportCount": 0
+    },
+    "scripts/runtime-install.test.ts": {
+      "countedLines": 155,
+      "physicalLines": 156,
+      "forbiddenImportCount": 0
+    },
+    "scripts/runtime-manifest.mjs": {
+      "countedLines": 73,
+      "physicalLines": 74,
+      "forbiddenImportCount": 0
+    },
+    "scripts/runtime-notices.mjs": {
+      "countedLines": 40,
+      "physicalLines": 42,
+      "forbiddenImportCount": 0
+    },
+    "scripts/runtime-packages.mjs": {
+      "countedLines": 141,
+      "physicalLines": 143,
       "forbiddenImportCount": 0
     },
     "scripts/smoke-cli.mjs": {
@@ -93,8 +128,8 @@
       "forbiddenImportCount": 0
     },
     "src/auth/scopes.ts": {
-      "countedLines": 112,
-      "physicalLines": 122,
+      "countedLines": 113,
+      "physicalLines": 123,
       "forbiddenImportCount": 0
     },
     "src/auth/session.test.ts": {
@@ -162,6 +197,16 @@
     "src/cli/output.ts": {
       "countedLines": 43,
       "physicalLines": 44,
+      "forbiddenImportCount": 0
+    },
+    "src/cli/redaction-smoke.ts": {
+      "countedLines": 17,
+      "physicalLines": 17,
+      "forbiddenImportCount": 0
+    },
+    "src/cli/self-invocation.test.ts": {
+      "countedLines": 33,
+      "physicalLines": 33,
       "forbiddenImportCount": 0
     },
     "src/cli/self.ts": {
@@ -319,8 +364,8 @@
       "forbiddenImportCount": 0
     },
     "src/domain/ports.ts": {
-      "countedLines": 137,
-      "physicalLines": 143,
+      "countedLines": 138,
+      "physicalLines": 145,
       "forbiddenImportCount": 0
     },
     "src/execution/acp-configure.test.ts": {
@@ -349,13 +394,13 @@
       "forbiddenImportCount": 0
     },
     "src/execution/acp.test.ts": {
-      "countedLines": 99,
-      "physicalLines": 101,
+      "countedLines": 108,
+      "physicalLines": 111,
       "forbiddenImportCount": 0
     },
     "src/execution/acp.ts": {
-      "countedLines": 416,
-      "physicalLines": 418,
+      "countedLines": 428,
+      "physicalLines": 430,
       "forbiddenImportCount": 0,
       "kind": "legacy",
       "justification": "ACP provider; split only if a later change needs room"
@@ -490,6 +535,36 @@
       "physicalLines": 255,
       "forbiddenImportCount": 1
     },
+    "src/memory/embeddings/index.ts": {
+      "countedLines": 9,
+      "physicalLines": 9,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/embeddings/model.ts": {
+      "countedLines": 27,
+      "physicalLines": 30,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/embeddings/native-runtime.test.ts": {
+      "countedLines": 36,
+      "physicalLines": 41,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/embeddings/native-runtime.ts": {
+      "countedLines": 125,
+      "physicalLines": 137,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/embeddings/provider.test.ts": {
+      "countedLines": 80,
+      "physicalLines": 94,
+      "forbiddenImportCount": 0
+    },
+    "src/memory/embeddings/provider.ts": {
+      "countedLines": 154,
+      "physicalLines": 166,
+      "forbiddenImportCount": 0
+    },
     "src/memory/group/capture-store.test.ts": {
       "countedLines": 19,
       "physicalLines": 19,
@@ -551,8 +626,8 @@
       "forbiddenImportCount": 0
     },
     "src/memory/group/memory-lifecycle.ts": {
-      "countedLines": 185,
-      "physicalLines": 194,
+      "countedLines": 171,
+      "physicalLines": 180,
       "forbiddenImportCount": 0
     },
     "src/memory/group/memory-query.ts": {
@@ -883,13 +958,13 @@
       "forbiddenImportCount": 0
     },
     "src/transport/schema.ts": {
-      "countedLines": 167,
-      "physicalLines": 167,
+      "countedLines": 168,
+      "physicalLines": 168,
       "forbiddenImportCount": 0
     },
     "src/transport/server-dispatch.ts": {
-      "countedLines": 199,
-      "physicalLines": 201,
+      "countedLines": 214,
+      "physicalLines": 216,
       "forbiddenImportCount": 0
     },
     "src/transport/server-register-tools.ts": {
@@ -908,8 +983,8 @@
       "forbiddenImportCount": 0
     },
     "src/transport/server.test.ts": {
-      "countedLines": 743,
-      "physicalLines": 747,
+      "countedLines": 761,
+      "physicalLines": 766,
       "forbiddenImportCount": 0,
       "kind": "legacy",
       "justification": "Transport contract suite; split with extracted host surfaces"

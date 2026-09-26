@@ -11,6 +11,7 @@ export const DEFAULT_SCOPES: readonly ControllerScope[] = CONTROLLER_SCOPES;
 export const RPC_REQUIRED_SCOPES = {
   "system.status": "authenticated",
   "providers.list": "providers:read",
+  "providers.resources": "providers:read",
   "providers.models": "providers:read",
   "threads.create": "threads:operate",
   "threads.list": "threads:read",

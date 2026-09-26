@@ -22,6 +22,7 @@ const stringArray = { type: "array", items: string, maxItems: 100 };
 const schemas: Record<string, object> = {
   "system.status": object({}),
   "providers.list": object({}),
+  "providers.resources": object({ provider: string }, ["provider"]),
   "interactions.list": object({ threadId: string }, ["threadId"]),
   "tools.list": object({ threadId: string }, ["threadId"]),
   "providers.models": object(

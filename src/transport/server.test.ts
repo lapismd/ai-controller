@@ -744,4 +744,23 @@ describe("session authorization", () => {
       store.close();
     }
   });
+
+  it("authorizes operational resource reads by provider id", async () => {
+    const store = new ControllerStore(":memory:");
+    const resources = { status: "available", observedAt: 1, workers: { busy: 1, idle: 0, starting: 0, stopping: 0 }, sessions: 1, rssBytes: 1024 };
+    const provider = {
+      capabilities: { driver: "acp", content: ["text" as const], configuration: false, resume: "none" as const, approvals: false, input: false, tools: false },
+      resources: async () => resources,
+      execute: async () => {}, close: async () => {},
+    };
+    const controller = new Controller(store, new Map([["allowed", provider], ["other", provider]]));
+    const server = await serveController(controller, { credentials: [{ token, principal: { id: "owner", providers: ["allowed"], workspaces: ["root"], scopes: ["providers:read"] } }] });
+    const client = new ControllerClient({ url: server.url, token });
+    try {
+      await expect(client.request("providers.resources", { provider: "allowed" })).resolves.toEqual(resources);
+      await expect(client.request("providers.resources", { provider: "other" })).rejects.toMatchObject({ code: "forbidden" });
+    } finally {
+      client.dispose(); await server.close(); await controller.close(); store.close();
+    }
+  });
 });

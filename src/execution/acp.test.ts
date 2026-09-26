@@ -98,4 +98,14 @@ describe("ACP library execution", () => {
     ]);
     await provider.close();
   });
+
+  it("reads an operational worker snapshot without opening a session", async () => {
+    const snapshot = { status: "available", observedAt: 1, workers: { busy: 1, idle: 2, starting: 0, stopping: 0 }, sessions: 3, rssBytes: 8192 };
+    const provider = new AcpProvider({
+      id: "codex", agent: "codex", workspaces: { vault: "/tmp/fixture" },
+      executor: { snapshotAcpResources: async () => snapshot, close: async () => {} } as unknown as AgentRuntimeExecutor,
+    });
+    await expect(provider.resources()).resolves.toEqual(snapshot);
+    await provider.close();
+  });
 });
