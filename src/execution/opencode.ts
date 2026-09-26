@@ -73,8 +73,8 @@ export class OpenCodeProvider implements ExecutionProvider {
     this.#busy.add(key);
     try {
       const server = await this.server(key, workspace);
-      const response = await server.json<{ all?: Array<{ id: string; models?: Record<string, { name?: string }> }> }>("/provider", "GET");
-      const entries = (response.all ?? []).flatMap((provider) =>
+      const response = await server.json<{ connected?: string[]; all?: Array<{ id: string; models?: Record<string, { name?: string }> }> }>("/provider", "GET");
+      const entries = (response.all ?? []).filter((provider) => response.connected?.includes(provider.id)).flatMap((provider) =>
         Object.entries(provider.models ?? {}).map(([id, model]) => ({
           id: `${provider.id}/${id}`,
           label: model.name ?? id,
