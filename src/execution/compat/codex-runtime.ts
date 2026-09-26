@@ -24,6 +24,7 @@ import {
   userInputRequestFromServerRequest,
   type AppServerMessage,
 } from "./app-server-protocol.js";
+import { codexThreadPolicy, codexTurnPolicy } from "../codex-approval-policy.js";
 
 type PendingRequest = {
   resolve(value: unknown): void;
@@ -79,8 +80,7 @@ export class CodexNativeSession implements AgentSession {
       model: this.#request.model?.model ?? null,
       cwd: workspace ?? null,
       runtimeWorkspaceRoots: workspace ? [workspace] : null,
-      approvalPolicy: this.#request.restricted ? "never" : "on-request",
-      sandbox: "read-only",
+      ...codexThreadPolicy(this.#request),
     };
     const response = (await this.#requestRpc(
       resumeThreadId ? "thread/resume" : "thread/start",
@@ -114,8 +114,7 @@ export class CodexNativeSession implements AgentSession {
             runtimeWorkspaceRoots: [this.#request.workspace],
           }
         : {}),
-      approvalPolicy: this.#request.restricted ? "never" : "on-request",
-      sandboxPolicy: { type: "readOnly", networkAccess: false },
+      ...codexTurnPolicy(this.#request),
       ...(this.#request.model?.model
         ? { model: this.#request.model.model }
         : {}),

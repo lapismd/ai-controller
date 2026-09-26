@@ -133,7 +133,7 @@ export class AcpProvider implements ExecutionProvider {
       mcpServers: context.mcpServers ?? [],
       restricted: preparation.configuration.restricted ?? false,
       vcsIdentity: preparation.configuration.vcsIdentity,
-      permissionMode: preparation.configuration.permissionMode,
+      permissionMode: preparation.configuration.permissionMode, approvalPolicy: preparation.configuration.approvalPolicy ?? "ask",
     });
     if (session && session.manifest !== manifest) {
       await this.#executor.closeAcpSession(session.sessionId);
@@ -169,7 +169,7 @@ export class AcpProvider implements ExecutionProvider {
           sessionId: session.sessionId,
           agent: this.options.agent,
           workspace,
-          restricted: preparation.configuration.restricted,
+          restricted: preparation.configuration.restricted, approvalPolicy: preparation.configuration.approvalPolicy ?? "ask",
           ...(preparation.configuration.permissionMode
             ? { permissionMode: preparation.configuration.permissionMode }
             : {}),
@@ -186,8 +186,8 @@ export class AcpProvider implements ExecutionProvider {
         throw error;
       }
     }
-    if (preparation.configuration.permissionMode)
-      await context.emit({ type: "execution-policy", nativeMode: nativePermissionMode(this.#executor, session.sessionId, preparation.configuration.permissionMode) });
+    const nativeMode = nativePermissionMode(this.#executor, session.sessionId, preparation.configuration.permissionMode);
+    if (nativeMode) await context.emit({ type: "execution-policy", nativeMode });
     const model = preparation.configuration.model;
     const thinking = preparation.configuration.thinking;
     if (thinking && !["off", "low", "medium", "high"].includes(thinking))

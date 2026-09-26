@@ -1,6 +1,7 @@
 import type { ExecutionContext } from "../domain/ports.js";
 import type { Json } from "../contracts.js";
 import type { OpenCodeServer } from "./opencode-server.js";
+import { openCodeApprovalRequest, openCodePermissionReply } from "./opencode-permission.js";
 
 export type OpenCodeEvent = {
   type: string;
@@ -47,8 +48,7 @@ export async function consumeOpenCodeEvents(
   context: ExecutionContext,
 ): Promise<void> {
   const textByPart = new Map<string, string>();
-  const pending = new Set<Promise<void>>();
-  const interactions = new Set<string>();
+  const pending = new Set<Promise<void>>(); const interactions = new Set<string>();
   let terminal = false;
   for await (const event of events) {
     const props = record(event.properties);
@@ -71,9 +71,9 @@ export async function consumeOpenCodeEvents(
       if (!/^per[_a-zA-Z0-9-]+$/.test(id)) continue;
       if (interactions.has(id)) continue;
       interactions.add(id);
-      const decision = context.interact("approval", id, props as Json, Date.now() + 15 * 60_000)
+      const decision = context.interact("approval", id, openCodeApprovalRequest(props), Date.now() + 15 * 60_000)
         .then((value) => server.json(`/permission/${encodeURIComponent(id)}/reply`, "POST", {
-          reply: value === "allow_always" ? "always" : value === "allow_once" ? "once" : "reject",
+          reply: openCodePermissionReply(value),
         }).then(() => undefined),
         () => server.json(`/permission/${encodeURIComponent(id)}/reply`, "POST", { reply: "reject" }).then(() => undefined))
         .finally(() => pending.delete(decision));

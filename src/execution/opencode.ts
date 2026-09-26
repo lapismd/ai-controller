@@ -4,6 +4,7 @@ import { ToolBridgeBroker, type ToolBridgeCall } from "@lapismd/ai-host";
 import { consumeOpenCodeEvents, openCodeEvents } from "./opencode-events.js";
 import { OpenCodeServer } from "./opencode-server.js";
 import { AcpWorkerPool } from "./acp-worker-pool.js";
+import { openCodePermissionRules } from "./opencode-permission.js";
 
 type OpenCodeSession = { id: string; workspace: string; server: OpenCodeServer; serverKey: string; manifest: string; bridgeId?: string };
 
@@ -23,8 +24,7 @@ export class OpenCodeProvider implements ExecutionProvider {
     tools: true,
     externalMcp: true,
   };
-  readonly #servers = new Map<string, Promise<OpenCodeServer>>();
-  readonly #sessions = new Map<string, OpenCodeSession>();
+  readonly #servers = new Map<string, Promise<OpenCodeServer>>(); readonly #sessions = new Map<string, OpenCodeSession>();
   readonly #contexts = new Map<string, ExecutionContext>();
   readonly #broker: ToolBridgeBroker;
   readonly #connectionId: string;
@@ -103,7 +103,7 @@ export class OpenCodeProvider implements ExecutionProvider {
     if (preparation.configuration.restricted)
       throw new ControllerError("unsupported_configuration", "OpenCode Native does not support restricted sessions");
     const workspace = this.workspace(thread.workspace);
-    const manifest = JSON.stringify({ workspace, tools: context.tools, mcpServers: context.mcpServers ?? [], permissionMode: preparation.configuration.permissionMode });
+    const manifest = JSON.stringify({ workspace, tools: context.tools, mcpServers: context.mcpServers ?? [], permissionMode: preparation.configuration.permissionMode, approvalPolicy: preparation.configuration.approvalPolicy ?? "ask" });
     const serverKey = context.tools.length || context.mcpServers?.length ? `${workspace}:${thread.id}` : workspace;
     await this.#pool.reserve(this.poolKey(serverKey), () => this.evictServer(serverKey), context.signal);
     this.#busy.add(serverKey);
@@ -145,7 +145,7 @@ export class OpenCodeProvider implements ExecutionProvider {
       }
       for (const mcp of context.mcpServers ?? [])
         await server.json("/mcp", "POST", { name: mcp.name, config: { type: "local", command: [mcp.command, ...(mcp.args ?? [])], ...(mcp.env ? { environment: mcp.env } : {}) } });
-      const created = await server.json<{ id: string }>("/session", "POST", { title: `Controller ${thread.id}` });
+      const created = await server.json<{ id: string }>("/session", "POST", { title: `Controller ${thread.id}`, permission: openCodePermissionRules(preparation.configuration) });
       if (!/^ses[_a-zA-Z0-9-]+$/.test(created.id)) throw new Error("OpenCode returned an invalid session id");
       session = { id: created.id, workspace, server, serverKey, manifest, ...(bridgeId ? { bridgeId } : {}) };
       this.#sessions.set(thread.id, session);

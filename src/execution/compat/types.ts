@@ -58,7 +58,7 @@ export type AgentRequest = {
   appToolSession?: AppToolSessionDescriptor;
   skillSnapshot?: SkillSnapshot;
   skillActivations?: SkillActivation[];
-  restricted?: boolean;
+  restricted?: boolean; approvalPolicy?: "ask" | "allow-all";
   requireApprovals?: boolean;
   requirePolicyAmendments?: boolean;
 };

@@ -95,7 +95,7 @@ export class CodexProvider implements ExecutionProvider {
     const manifest = JSON.stringify({
       tools: context.tools,
       mcpServers: context.mcpServers ?? [],
-      restricted: preparation.configuration.restricted ?? false,
+      restricted: preparation.configuration.restricted ?? false, approvalPolicy: configuration.approvalPolicy ?? "ask",
     });
     if (state && state.manifest !== manifest) {
       await state.session.close();
@@ -123,7 +123,7 @@ export class CodexProvider implements ExecutionProvider {
       const request = {
         prompt: "",
         workspace,
-        restricted: configuration.restricted,
+        restricted: configuration.restricted, approvalPolicy: configuration.approvalPolicy ?? "ask",
         mcpServers: context.mcpServers,
         model: configuration.model
           ? { provider: "codex", model: configuration.model }
