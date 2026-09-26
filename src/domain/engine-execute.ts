@@ -59,10 +59,12 @@ export async function executeTurn(
   turn: Turn,
   signal: AbortSignal,
 ): Promise<void> {
+  let releaseProvider: (() => void) | undefined;
   try {
     const provider = host.providers.get(thread.provider);
     if (!provider)
       throw new ControllerError("provider_unavailable", "Provider unavailable");
+    releaseProvider = await provider.reserve?.(thread, signal);
     if (
       thread.nativeSessionId &&
       thread.capturePolicy !== host.store.capture.policyId
@@ -227,6 +229,7 @@ export async function executeTurn(
       );
     }
   } finally {
+    releaseProvider?.();
     try {
       await persistCapture(
         host,

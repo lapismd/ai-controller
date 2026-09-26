@@ -9,6 +9,7 @@ import { ControllerError, type Principal } from "./contracts.js";
 import { ControllerStore } from "./persistence/store.js";
 import { Controller } from "./domain/engine.js";
 import { AcpProvider } from "./execution/acp.js";
+import { AcpWorkerPool } from "./execution/acp-worker-pool.js";
 import { CodexProvider } from "./execution/codex.js";
 import type { ExecutionProvider } from "./domain/ports.js";
 import { serveController } from "./transport/server.js";
@@ -56,6 +57,7 @@ export async function startService(
     command: self.command,
     args: [...self.argsPrefix, "__internal", "mcp-shim"],
   };
+  const workerPool = new AcpWorkerPool();
   const providers = new Map<string, ExecutionProvider>(
     config.providers.map((provider) => [
       provider.id,
@@ -66,6 +68,7 @@ export async function startService(
             workspaces,
             shimCommand,
             agentRegistry: registry,
+            workerPool,
           })
         : new CodexProvider(workspaces, { id: provider.id, shimCommand }),
     ]),
@@ -95,11 +98,13 @@ export async function startService(
       async close() {
         await server.close();
         await controller.close();
+        workerPool.close();
         store.close();
       },
     };
   } catch (error) {
     await controller.close();
+    workerPool.close();
     store.close();
     throw error;
   }

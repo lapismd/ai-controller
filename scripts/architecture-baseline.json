@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "sourceCommit": "74ede798024d3781f98de1f4554392c3b70cfcc0",
+  "sourceCommit": "812dd5617f7feb1fff3efbad4f6f8df7f86d1407",
   "limits": {
     "newProductionCountedLines": 300,
     "newTestCountedLines": 500,
@@ -292,8 +292,8 @@
       "forbiddenImportCount": 0
     },
     "src/domain/engine-execute.ts": {
-      "countedLines": 259,
-      "physicalLines": 261,
+      "countedLines": 262,
+      "physicalLines": 264,
       "forbiddenImportCount": 0
     },
     "src/domain/engine-host.ts": {
@@ -364,8 +364,13 @@
       "forbiddenImportCount": 0
     },
     "src/domain/ports.ts": {
-      "countedLines": 138,
-      "physicalLines": 145,
+      "countedLines": 139,
+      "physicalLines": 147,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/acp-capabilities.ts": {
+      "countedLines": 16,
+      "physicalLines": 17,
       "forbiddenImportCount": 0
     },
     "src/execution/acp-configure.test.ts": {
@@ -383,6 +388,11 @@
       "physicalLines": 30,
       "forbiddenImportCount": 0
     },
+    "src/execution/acp-event-ingest.ts": {
+      "countedLines": 123,
+      "physicalLines": 124,
+      "forbiddenImportCount": 0
+    },
     "src/execution/acp-permission-lifecycle.test.ts": {
       "countedLines": 34,
       "physicalLines": 35,
@@ -393,17 +403,35 @@
       "physicalLines": 51,
       "forbiddenImportCount": 0
     },
+    "src/execution/acp-prompt.ts": {
+      "countedLines": 13,
+      "physicalLines": 14,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/acp-tool-bridge.ts": {
+      "countedLines": 35,
+      "physicalLines": 37,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/acp-worker-pool.test.ts": {
+      "countedLines": 54,
+      "physicalLines": 59,
+      "forbiddenImportCount": 0
+    },
+    "src/execution/acp-worker-pool.ts": {
+      "countedLines": 114,
+      "physicalLines": 125,
+      "forbiddenImportCount": 0
+    },
     "src/execution/acp.test.ts": {
       "countedLines": 108,
       "physicalLines": 111,
       "forbiddenImportCount": 0
     },
     "src/execution/acp.ts": {
-      "countedLines": 428,
-      "physicalLines": 430,
-      "forbiddenImportCount": 0,
-      "kind": "legacy",
-      "justification": "ACP provider; split only if a later change needs room"
+      "countedLines": 297,
+      "physicalLines": 298,
+      "forbiddenImportCount": 0
     },
     "src/execution/codex.test.ts": {
       "countedLines": 64,
@@ -938,8 +966,8 @@
       "forbiddenImportCount": 0
     },
     "src/service.ts": {
-      "countedLines": 104,
-      "physicalLines": 106,
+      "countedLines": 109,
+      "physicalLines": 111,
       "forbiddenImportCount": 0
     },
     "src/transcript-contracts.ts": {

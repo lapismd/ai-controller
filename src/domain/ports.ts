@@ -55,6 +55,8 @@ export interface ExecutionContext {
 }
 export interface ExecutionProvider {
   capabilities: Capabilities;
+  /** Reserve bounded execution capacity before context preparation begins. */
+  reserve?(thread: Thread, signal: AbortSignal): Promise<() => void>;
   /** Operational snapshot only; no prompts, tool arguments or credentials. */
   resources?(): Promise<unknown>;
   models?(
