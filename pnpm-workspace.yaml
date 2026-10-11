@@ -1,0 +1,10 @@
+packages:
+  - "."
+
+onlyBuiltDependencies:
+  - esbuild
+
+overrides:
+  source-map-js: ">=1.2.2"
+  simple-git: "^4.0.1"
+  "@simple-git/argv-parser": ">=2.0.1"

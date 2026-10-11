@@ -1,0 +1,31 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: mdbook@0.5.4,deno@2.9.7
+      - run: pnpm install --frozen-lockfile --ignore-pnpmfile
+      - run: pnpm audit
+      - run: pnpm spec:check
+      - run: pnpm check
+      - run: pnpm test
+      - run: pnpm test:release
+      - run: pnpm release:prepare

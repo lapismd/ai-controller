@@ -1,0 +1,94 @@
+name: Release verified npm package
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the verified artifact after npm bootstrap and trusted-publisher setup
+        required: true
+        default: false
+        type: boolean
+permissions:
+  contents: read
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
+jobs:
+  artifact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: mdbook@0.5.4,deno@2.9.7
+      - name: Require the canonical main branch
+        run: test "$GITHUB_REF" = refs/heads/main
+      - run: pnpm install --frozen-lockfile --ignore-pnpmfile
+      - run: pnpm audit
+      - run: pnpm spec:check
+      - run: pnpm check
+      - run: pnpm test
+      - run: pnpm test:release
+      - run: pnpm release:prepare
+      - uses: actions/upload-artifact@v7
+        with:
+          name: npm-release-${{ github.sha }}
+          path: .local/npm-release
+          if-no-files-found: error
+          retention-days: 14
+  publish:
+    needs: artifact
+    if: inputs.publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: npm-production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: npm install --global npm@12.2.0
+      - uses: actions/download-artifact@v8
+        with:
+          name: npm-release-${{ github.sha }}
+          path: .local/npm-release
+      - run: node scripts/npm-release.mjs publish
+        env:
+          LAPIS_NPM_RELEASE_APPROVED: "1"
+      - run: node scripts/npm-release.mjs verify
+  notes:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v8
+        with:
+          name: npm-release-${{ github.sha }}
+          path: .local/npm-release
+      - name: Create the package release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="$(node -p 'require("./package.json").version')"
+          name="$(node -p 'require("./package.json").name')"
+          tag="${name#@lapismd/}@${version}"
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" .local/npm-release/*.tgz .local/npm-release/manifest.json \
+              --target "$GITHUB_SHA" --title "$name@$version" --notes "Verified npm release $name@$version."
+          fi

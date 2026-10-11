@@ -1,6 +1,19 @@
 # Specification governance
 
+The initial release uses spec-validator 0.1.4 and patched source-map tooling.
+The optional embedding runtime's Git downloader resolves patched simple-git
+and argv-parser versions through explicit workspace overrides. Native model
+installation remains a separate operator action; the package audit has no
+advisory exceptions.
+Normal registry installation resolves the release dependency graph without a
+local package hook. The workspace lockfile and audit overrides map to this
+chapter, and only the required esbuild dependency build is allowed.
+
 ## Requirements
+
+The public README uses only declared package exports. The independent
+`publish-spec-pages.yml` workflow builds the canonical book without installing
+runtime dependencies, so spec publication does not depend on npm release gates.
 
 | ID          | Requirement                                                                                                                                                                                                                   |
 | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -21,6 +34,7 @@
 enforced by AIC-ARCH-001 and AIC-ARCH-002. Organisation plans under
 `docs/plans/` remain non-canonical.
 
-The README documents authenticated public-client usage and separate operator
-installation. The independent specification workflow builds canonical mdBook
-source without requiring runtime dependency installation or service activation.
+Repository-owned npm release helpers and GitHub workflows are protected package
+contracts. Their immutable artifact, registry integrity, and tokenless OIDC
+publishing checks accompany the existing package validation gates. Private
+credentials remain outside source and release artifacts.
