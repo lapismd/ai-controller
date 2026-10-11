@@ -1,0 +1,66 @@
+name: Publish specification to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "spec/**"
+      - ".github/workflows/publish-spec-pages.yml"
+  pull_request:
+    paths:
+      - "spec/**"
+      - ".github/workflows/publish-spec-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spec-pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build canonical specification
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: mdbook@0.5.4
+      - name: Build the canonical book
+        env:
+          MDBOOK_OUTPUT__HTML__SITE_URL: /${{ github.event.repository.name }}/
+        run: |
+          mdbook build spec
+          test -f spec/book/index.html
+          test -f spec/book/verification.html
+      - name: Configure GitHub Pages
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/configure-pages@v6
+      - name: Upload specification
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: spec/book
+
+  deploy:
+    name: Deploy specification
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

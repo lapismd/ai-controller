@@ -41,9 +41,15 @@ export default defineConfig(tableRequirements(), {
       canonicalPattern: "^spec/src/(?:architecture|spec-governance)\\.md$",
       ignore: ["(^|/)node_modules/", "^dist/", "^spec/book/", "\\.test\\.ts$"],
       protected: [
+        "^(?:README\\.md$|\\.github/workflows/publish-spec-pages\\.yml$)",
         "^(?:src/|scripts/|docs/|package\\.json$|deno\\.json$|AGENTS\\.md$|spec-validator\\.config\\.mjs$|spec/book\\.toml$|\\.gitignore$)",
       ],
       rules: [
+        {
+          pattern:
+            "^(?:README\\.md$|\\.github/workflows/publish-spec-pages\\.yml$)",
+          chapters: ["spec/src/spec-governance.md"],
+        },
         {
           pattern: "^(?:src/|scripts/|docs/|package\\.json$|deno\\.json$)",
           chapters: ["spec/src/architecture.md"],

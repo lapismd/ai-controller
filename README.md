@@ -1,10 +1,89 @@
 # AI Controller
 
+[![npm version](https://img.shields.io/npm/v/%40lapismd%2Fai-controller)](https://www.npmjs.com/package/@lapismd/ai-controller)
+
 Shared AI execution orchestration for Lapis, Nostr integrations, and other clients.
 The controller runs as its own Deno process. `@lapismd/ai-host` supplies execution
 mechanics; applications supply authorized tools, context and storage adapters.
 
+## Install the client library
+
+```sh
+npm install @lapismd/ai-controller
+# or
+pnpm add @lapismd/ai-controller
+```
+
+The package is ESM and includes TypeScript declarations. Its browser-safe
+`/client` export connects to an already running controller; installing the npm
+library does not install or start the Deno service. Use the checkout instructions
+below for that service. Node applications should use Node.js 22 or newer; the
+operator CLI requires Deno 2.9.5 or newer and separately installed agent tools.
+
+## Use an existing controller
+
+Obtain the controller WebSocket URL and an authorized token from your host or
+operator. The default local service listens at `ws://127.0.0.1:7346`; deployment
+configuration can change it. Keep tokens out of URLs, logs and source control.
+
+```ts
+import { ControllerClient } from "@lapismd/ai-controller/client";
+
+export async function readThread(url: string, token: string, threadId: string) {
+  const client = new ControllerClient({ url, token });
+  try {
+    await client.connect();
+    return await client.snapshot(threadId);
+  } finally {
+    client.dispose();
+  }
+}
+```
+
+For a long-lived application, retain one client and dispose it at host teardown.
+`token` may also be an async callback that retrieves the current authorized
+credential. The SDK supports subscriptions, reconnect and committed-state replay.
+
+After the operator configures a provider and grants your workspace access:
+
+```ts
+import { ControllerClient } from "@lapismd/ai-controller/client";
+
+export async function queuePrompt(
+  client: ControllerClient,
+  threadId: string,
+  commandId: string,
+  text: string,
+) {
+  return await client.submit({ threadId, commandId, text });
+}
+```
+
+Create a thread once using `client.createThread({ provider, workspace })` with
+configured provider and workspace identifiers. Persist its ID and a command ID
+for each submission. Retry the same command with the same ID and payload only;
+the returned receipt confirms durable acceptance, not provider completion.
+Use `client.subscribe(threadId, listener)` to follow snapshots and call its
+returned unsubscribe function when the view closes. Register application-owned
+tool, context and memory endpoints through `client.registerEndpoint()`.
+
+| Import                                                    | Purpose                                     |
+| --------------------------------------------------------- | ------------------------------------------- |
+| `@lapismd/ai-controller/client`                           | Authenticated browser-safe client           |
+| `@lapismd/ai-controller/contracts`                        | Shared request, receipt and state contracts |
+| `@lapismd/ai-controller/runtime`                          | Session integration facade                  |
+| `@lapismd/ai-controller/managed`                          | Host-managed controller process             |
+| `@lapismd/ai-controller/memory`                           | Memory ports and policies                   |
+| `@lapismd/ai-controller/memory/lapis` and `/memory/group` | Compatibility memory implementations        |
+
 ## Run locally
+
+Clone [the repository](https://github.com/lapismd/ai-controller) and install its
+registry dependencies before building or installing the CLI:
+
+```sh
+pnpm install --frozen-lockfile
+```
 
 The developer install path matches Nostr's `pnpm local:agent`. It builds the
 current checkout, atomically installs `~/.local/bin/lapis-ai-controller`,
@@ -74,6 +153,8 @@ identities and status while plaintext remains volatile; lost private payloads ar
 reported as gaps. Native context restoration depends on provider capabilities.
 
 Canonical behavior is specified in [the architecture](spec/src/architecture.md).
+[The published specification](https://lapismd.github.io/ai-controller/) is built
+from `spec/src` and deployed by GitHub Actions on `main`.
 [Migration evidence and release boundaries](spec/records/migration.md) distinguish
 fixture validation from live-provider and installed-service acceptance.
 
