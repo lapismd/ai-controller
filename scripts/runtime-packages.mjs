@@ -1,16 +1,14 @@
-import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import {
   cp,
   mkdir,
-  mkdtemp,
   readFile,
   readdir,
   realpath,
   rm,
   symlink,
 } from "node:fs/promises";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 
 export async function packageDirectory(name, from) {
   for (let directory = resolve(from); ; directory = dirname(directory)) {
@@ -41,28 +39,29 @@ export async function materializePackages(root, output, names, overrides = {}) {
         `${copied.size}-${manifest.name.replaceAll("/", "-")}`,
       );
       copied.set(source, target);
-      const archive = await mkdtemp(join(tmpdir(), "lapis-runtime-package-"));
-      try {
-        const packed = spawnSync(
-          "npm",
-          ["pack", "--ignore-scripts", "--json", "--pack-destination", archive],
-          { cwd: source, encoding: "utf8" },
+      const packed = spawnSync(
+        "npm",
+        ["pack", "--dry-run", "--ignore-scripts", "--json"],
+        { cwd: source, encoding: "utf8" },
+      );
+      if (packed.status !== 0)
+        throw new Error(
+          `Could not list package files for ${name}: ${packed.stderr}`,
         );
-        if (packed.status !== 0)
-          throw new Error(`Could not pack ${name}: ${packed.stderr}`);
-        const file = JSON.parse(packed.stdout)[0].filename;
-        await mkdir(target, { recursive: true });
-        const unpacked = spawnSync(
-          "tar",
-          ["-xzf", join(archive, file), "--strip-components=1", "-C", target],
-          { encoding: "utf8" },
-        );
-        if (unpacked.status !== 0)
-          throw new Error(`Could not unpack ${name}: ${unpacked.stderr}`);
-        await prune(target);
-      } finally {
-        await rm(archive, { recursive: true, force: true });
+      await mkdir(target, { recursive: true });
+      for (const { path: filename } of JSON.parse(packed.stdout)[0].files) {
+        const file = resolve(source, filename);
+        const destination = resolve(target, filename);
+        if (
+          !file.startsWith(source + sep) ||
+          !destination.startsWith(target + sep) ||
+          !(await realpath(file)).startsWith(source + sep)
+        )
+          throw new Error(`Runtime package file escapes its root: ${name}`);
+        await mkdir(dirname(destination), { recursive: true });
+        await cp(file, destination, { dereference: true });
       }
+      await prune(target);
       for (const dependency of Object.keys(manifest.dependencies ?? {}).sort())
         await install(dependency, source, join(target, "node_modules"));
       for (const dependency of Object.keys(
