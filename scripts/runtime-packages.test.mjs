@@ -52,3 +52,41 @@ it("materializes hard-linked published files independently without unshipped dat
     await rm(root, { recursive: true, force: true });
   }
 }, 30_000);
+
+it("inventories published files without executing dependency prepare scripts", async () => {
+  const root = await mkdtemp(join(tmpdir(), "controller-runtime-prepare-"));
+  try {
+    const source = join(root, "node_modules", "runtime-fixture");
+    await mkdir(join(source, "dist"), { recursive: true });
+    await writeFile(
+      join(source, "package.json"),
+      JSON.stringify({
+        name: "runtime-fixture",
+        version: "1.0.0",
+        files: ["dist"],
+        scripts: { prepare: "node prepare.cjs" },
+      }),
+    );
+    await writeFile(
+      join(source, "dist", "main.js"),
+      "export const ready = true;\n",
+    );
+    await writeFile(
+      join(source, "prepare.cjs"),
+      "require('node:fs').writeFileSync('prepare-ran', 'unexpected'); throw new Error('Dependency prepare must not run');\n",
+    );
+    const output = join(root, "output");
+    await materializePackages(root, output, ["runtime-fixture"]);
+    expect(
+      await readFile(
+        join(output, "node_modules", "runtime-fixture", "dist", "main.js"),
+        "utf8",
+      ),
+    ).toBe("export const ready = true;\n");
+    await expect(stat(join(source, "prepare-ran"))).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}, 30_000);

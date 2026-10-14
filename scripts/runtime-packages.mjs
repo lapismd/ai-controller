@@ -1,4 +1,5 @@
-import { spawnSync } from "node:child_process";
+import Arborist from "@npmcli/arborist";
+import packlist from "npm-packlist";
 import {
   cp,
   mkdir,
@@ -39,17 +40,12 @@ export async function materializePackages(root, output, names, overrides = {}) {
         `${copied.size}-${manifest.name.replaceAll("/", "-")}`,
       );
       copied.set(source, target);
-      const packed = spawnSync(
-        "npm",
-        ["pack", "--dry-run", "--ignore-scripts", "--json"],
-        { cwd: source, encoding: "utf8" },
-      );
-      if (packed.status !== 0)
-        throw new Error(
-          `Could not list package files for ${name}: ${packed.stderr}`,
-        );
+      // Use npm's inventory library directly: older npm CLIs run prepare
+      // even when pack is invoked with --dry-run and --ignore-scripts.
+      const tree = await new Arborist({ path: source }).loadActual();
+      const files = await packlist(tree);
       await mkdir(target, { recursive: true });
-      for (const { path: filename } of JSON.parse(packed.stdout)[0].files) {
+      for (const filename of files) {
         const file = resolve(source, filename);
         const destination = resolve(target, filename);
         if (

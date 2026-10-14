@@ -9,6 +9,11 @@ Normal registry installation resolves the release dependency graph without a
 local package hook. The workspace lockfile and audit overrides map to this
 chapter, and only the required esbuild dependency build is allowed.
 
+CLI build tooling resolves Arborist 9 and npm-packlist 10 through registry
+semver ranges and the frozen pnpm lockfile. Those inventory libraries remain
+development dependencies and do not change the installed controller runtime
+dependency graph or permit dependency lifecycle scripts during staging.
+
 ## Requirements
 
 The public README uses only declared package exports. The independent

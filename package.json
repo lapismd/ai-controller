@@ -70,17 +70,19 @@
     "release:verify": "node scripts/npm-release.mjs verify"
   },
   "dependencies": {
+    "@lapismd/agent-redaction": "^0.1.0",
     "@lapismd/ai-host": "^0.3.0",
     "ajv": "^8.20.0",
     "ws": "^8.18.3",
-    "yaml": "^2.9.0",
-    "@lapismd/agent-redaction": "^0.1.0"
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@lapismd/spec-validator": "^0.1.4",
+    "@npmcli/arborist": "^9.9.2",
     "@types/node": "^24.0.0",
     "@types/ws": "^8.18.1",
     "esbuild": "^0.28.2",
+    "npm-packlist": "^10.0.4",
     "publint": "^0.3.12",
     "typescript": "^5.9.3",
     "vitest": "^4.1.0"
