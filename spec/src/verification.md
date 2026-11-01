@@ -57,3 +57,5 @@ regressions pass; `pnpm spec:check`, `pnpm check`, `pnpm test` (137 tests), and
 tests, including its native checkout repair (two opt-in provider/clone tests
 remain skipped in that run). Lapis uses the separate vault-memory profile;
 its implementation is unchanged.
+
+Generated version PR activation evidence: [App-scoped version preparation](../records/2026-11-01-dependency-bot-activation.md).
