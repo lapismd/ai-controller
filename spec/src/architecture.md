@@ -1,5 +1,11 @@
 # Architecture
 
+CI audit recovery pins the patched transitive development/runtime packages required to clear the retained audit gate. Package-owned functional checks and publication gates remain required; no audit advisory is suppressed.
+
+<!-- dependency-automation-policy -->
+
+Dependency update PRs from the trusted LapisMD App, Dependabot or Renovate MAY skip specification checks using the PR author rather than the rerun actor. Functional checks remain required. The shared `lapismd/dependency-automation` coordinator proposes published first-party npm updates with Changeset release intent where required; it does not merge, publish, sign or deploy. This CI policy changes no runtime or public contract in this chapter.
+
 Each prepared turn MUST retain requested and effective approval policy, including
 restricted-session suppression. ACP native mode results MUST remain separate:
 applied, unsupported, rejected or unreported. Status MUST NOT infer native success
