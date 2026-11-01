@@ -47,10 +47,11 @@ jobs:
         uses: actions/upload-pages-artifact@v5
         with:
           path: spec/book
+    if: (true) && !(github.event_name == 'pull_request' && github.event.pull_request.user.type == 'Bot' && (contains(fromJSON('["dependabot[bot]","renovate[bot]","lapismd-dependency-bot[bot]"]'), github.event.pull_request.user.login) || (vars.LAPIS_DEPENDENCY_BOT_LOGIN != '' && github.event.pull_request.user.login == vars.LAPIS_DEPENDENCY_BOT_LOGIN)))
 
   deploy:
     name: Deploy specification
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: (github.ref == 'refs/heads/main' && github.event_name != 'pull_request') && !(github.event_name == 'pull_request' && github.event.pull_request.user.type == 'Bot' && (contains(fromJSON('["dependabot[bot]","renovate[bot]","lapismd-dependency-bot[bot]"]'), github.event.pull_request.user.login) || (vars.LAPIS_DEPENDENCY_BOT_LOGIN != '' && github.event.pull_request.user.login == vars.LAPIS_DEPENDENCY_BOT_LOGIN)))
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -64,3 +65,9 @@ jobs:
       - name: Deploy GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+env:
+  LAPIS_CI_EVENT: ${{ github.event_name }}
+  LAPIS_CI_PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+  LAPIS_CI_PR_AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
+  LAPIS_CI_PR_HEAD: ${{ github.event.pull_request.head.ref }}
+  LAPIS_DEPENDENCY_BOT_LOGIN: ${{ vars.LAPIS_DEPENDENCY_BOT_LOGIN }}

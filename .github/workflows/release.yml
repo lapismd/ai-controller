@@ -92,3 +92,16 @@ jobs:
             gh release create "$tag" .local/npm-release/*.tgz .local/npm-release/manifest.json \
               --target "$GITHUB_SHA" --title "$name@$version" --notes "Verified npm release $name@$version."
           fi
+  notify-dependencies:
+    name: Notify dependency consumers
+    needs:
+      - publish
+    if: always() && needs.publish.result == 'success'
+    permissions:
+      contents: read
+    uses: lapismd/dependency-automation/.github/workflows/notify.yml@ea9d35b12b612467bbabf1c6271ffa41b5eda4ba
+    with:
+      automation-ref: ea9d35b12b612467bbabf1c6271ffa41b5eda4ba
+      source-sha: ${{ github.sha }}
+    secrets:
+      app-private-key: ${{ secrets.LAPIS_DEPENDENCY_APP_PRIVATE_KEY }}

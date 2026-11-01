@@ -55,9 +55,9 @@
     "build:cli": "deno task build",
     "local:controller": "node scripts/local-controller.mjs",
     "local:agent": "node scripts/local-controller.mjs",
-    "spec:check": "spec-validator check",
-    "spec:validate": "spec-validator validate",
-    "spec:first": "spec-validator first",
+    "spec:check": "node scripts/dependency-automation/spec-policy.mjs check",
+    "spec:validate": "node scripts/dependency-automation/spec-policy.mjs validate",
+    "spec:first": "node scripts/dependency-automation/spec-policy.mjs first",
     "publint": "publint",
     "docs:write": "tsc && node scripts/docs-cli.mjs",
     "docs:check": "tsc && node scripts/docs-cli.mjs --check",
@@ -67,7 +67,9 @@
     "test:release": "vitest run scripts/npm-release.test.mjs",
     "release:prepare": "pnpm build && pnpm publint && node scripts/npm-release.mjs prepare",
     "release:publish": "node scripts/npm-release.mjs publish",
-    "release:verify": "node scripts/npm-release.mjs verify"
+    "release:verify": "node scripts/npm-release.mjs verify",
+    "changeset": "changeset",
+    "release:version": "node scripts/dependency-automation/version.mjs"
   },
   "dependencies": {
     "@lapismd/agent-redaction": "^0.1.0",
@@ -85,7 +87,8 @@
     "npm-packlist": "^10.0.4",
     "publint": "^0.3.12",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.0"
+    "vitest": "^4.1.0",
+    "@changesets/cli": "3.0.3"
   },
   "peerDependencies": {
     "node-llama-cpp": "3.18.1"
