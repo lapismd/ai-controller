@@ -79,7 +79,7 @@
     "yaml": "^2.9.0"
   },
   "devDependencies": {
-    "@lapismd/spec-validator": "^0.1.4",
+    "@lapismd/spec-validator": "^0.2.0",
     "@npmcli/arborist": "^9.9.2",
     "@types/node": "^24.0.0",
     "@types/ws": "^8.18.1",
