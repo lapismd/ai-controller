@@ -72,7 +72,7 @@
     "release:version": "node scripts/dependency-automation/version.mjs"
   },
   "dependencies": {
-    "@lapismd/agent-redaction": "^0.1.0",
+    "@lapismd/agent-redaction": "^0.1.1",
     "@lapismd/ai-host": "^0.3.0",
     "ajv": "^8.20.0",
     "ws": "^8.18.3",
