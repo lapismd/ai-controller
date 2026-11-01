@@ -2,6 +2,11 @@
 
 CI audit recovery pins the patched transitive development/runtime packages required to clear the retained audit gate. Package-owned functional checks and publication gates remain required; no audit advisory is suppressed.
 
+Version PR preparation MUST remain gated by `LAPIS_DEPENDENCY_VERSION_PR_ENABLED`.
+It MUST use a short-lived GitHub App token restricted to this repository with
+Contents and Pull requests write, so generated PRs trigger functional CI without
+manual token-workflow approval. Version preparation MUST NOT publish a package.
+
 <!-- dependency-automation-policy -->
 
 Dependency update PRs from the trusted LapisMD App, Dependabot or Renovate MAY skip specification checks using the PR author rather than the rerun actor. Functional checks remain required. The shared `lapismd/dependency-automation` coordinator proposes published first-party npm updates with Changeset release intent where required; it does not merge, publish, sign or deploy. This CI policy changes no runtime or public contract in this chapter.
