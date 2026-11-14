@@ -371,3 +371,10 @@ lane, followed by Deno runtime acceptance; no assertion or timeout is relaxed.
 The README documents public client installation and authenticated usage. The
 separate specification workflow publishes canonical contracts to GitHub Pages
 without starting a service or invoking an external provider.
+
+The prepared npm 0.1.1 release consumes the reviewed dependency Changeset,
+retains the existing public client/runtime protocol and uses the qualified
+AI Host 0.3 dependency line. Its version metadata grants no service-deployment
+or model-installation authority. The source security/toolchain qualification
+and isolated real version-command evidence remain required before protected
+publication; a green bot PR does not waive canonical main-push validation.

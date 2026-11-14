@@ -34,3 +34,8 @@ checkout with the qualified source and normal registry installation. It prepares
 0.1.1 while this source checkout remains 0.1.0. The fixture publishes nothing
 and starts no controller service. Source preparation is distinct from the
 subsequent version PR and protected publication.
+
+The generated 0.1.1 version PR passed functional CI. Its package-only version
+change still maps to the architecture chapter on main, so the versioning slice
+includes an explicit unchanged-contract confirmation before merge. This retains
+the strict main-push mapping instead of transferring the bot-PR exemption.
