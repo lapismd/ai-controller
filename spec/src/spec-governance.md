@@ -4,7 +4,10 @@
 
 Dependency update PRs from the trusted LapisMD App, Dependabot or Renovate MAY skip specification checks using the PR author rather than the rerun actor. Functional checks remain required. The shared `lapismd/dependency-automation` coordinator proposes published first-party npm updates with Changeset release intent where required; it does not merge, publish, sign or deploy. This CI policy changes no runtime or public contract in this chapter.
 
-The initial release uses spec-validator 0.1.4 and patched source-map tooling.
+Specification checks use the Deno-free registry spec-validator `^0.2.0`.
+The developer `spec:search` and `spec:index` commands expose its discovery ports.
+QMD is disabled in this repository; search reports the explicit `rg` fallback.
+Patched source-map tooling remains required.
 The optional embedding runtime's Git downloader resolves patched simple-git
 and argv-parser versions through explicit workspace overrides. Native model
 installation remains a separate operator action; the package audit has no
@@ -47,3 +50,8 @@ Repository-owned npm release helpers and GitHub workflows are protected package
 contracts. Their immutable artifact, registry integrity, and tokenless OIDC
 publishing checks accompany the existing package validation gates. Private
 credentials remain outside source and release artifacts.
+
+The security graph MUST resolve Hono at least 4.13.16 and @hono/node-server at
+least 2.1.6 through the existing bounded vulnerability-range overrides. Full and
+production audits retain every finding; no advisory is ignored. Native model
+installation and controller service deployment remain separate operator actions.

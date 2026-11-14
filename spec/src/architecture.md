@@ -6,6 +6,9 @@ Version PR preparation MUST remain gated by `LAPIS_DEPENDENCY_VERSION_PR_ENABLED
 It MUST use a short-lived GitHub App token restricted to this repository with
 Contents and Pull requests write, so generated PRs trigger functional CI without
 manual token-workflow approval. Version preparation MUST NOT publish a package.
+The generated version workflow MUST install its pinned Deno 2.9.7 runtime before
+Changesets 3 executes. This release-tool runtime does not change the Node-only
+specification validator or start a controller service.
 
 <!-- dependency-automation-policy -->
 

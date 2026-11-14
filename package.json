@@ -69,7 +69,9 @@
     "release:publish": "node scripts/npm-release.mjs publish",
     "release:verify": "node scripts/npm-release.mjs verify",
     "changeset": "changeset",
-    "release:version": "node scripts/dependency-automation/version.mjs"
+    "release:version": "node scripts/dependency-automation/version.mjs",
+    "spec:search": "spec-validator search",
+    "spec:index": "spec-validator index"
   },
   "dependencies": {
     "@lapismd/agent-redaction": "^0.1.1",

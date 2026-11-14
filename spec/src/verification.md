@@ -59,3 +59,8 @@ remain skipped in that run). Lapis uses the separate vault-memory profile;
 its implementation is unchanged.
 
 Generated version PR activation evidence: [App-scoped version preparation](../records/2026-11-01-dependency-bot-activation.md).
+
+Security and version-toolchain recovery is recorded in
+[the November 14 maintenance evidence](../records/2026-11-14-security-version-toolchain.md).
+The original full audit reported seven findings (six moderate, one low);
+patched registry resolution reports zero without suppressions.
